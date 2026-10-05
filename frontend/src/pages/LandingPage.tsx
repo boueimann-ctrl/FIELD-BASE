@@ -11,7 +11,7 @@ function LandingPage() {
         <div className="title_line"></div>
 
         <p className="tagline">
-          FIND YOUR FIELD.
+          MAKE THE FIELD PART OF LIFE.
         </p>
 
         <div className="login_actions">
@@ -19,12 +19,12 @@ function LandingPage() {
             className="login_button"
             onClick={() => navigate('/login')}
           >
-            FB // LOGIN
+            // LOGIN
             <span className="action_line"></span>
           </button>
 
           <button className="register_button">
-            FB // REGISTER
+            // REGISTER
             <span className="action_line"></span>
           </button>
         </div>

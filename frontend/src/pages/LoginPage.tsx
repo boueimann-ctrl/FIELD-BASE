@@ -1,13 +1,28 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 
 function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [emailError, setEmailError] = useState('')
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+ if (email === '') {
+  setEmailError('EMAIL IS REQUIRED')
+} else if (!email.includes('@')) {
+  setEmailError('INVALID EMAIL')
+} else {
+  setEmailError('')
+}
 
-  }
+
+if (password === '') {
+  setPassword('PASSWORD IS REQUIRED')
+} else if (!password.includes('6')){
+  setPassword('PASSWORD IS REQUIRED')
+}else{
+  setPassword('')
+}
 
   return (
     <main className="login_page">
@@ -33,6 +48,8 @@ function LoginPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
+
+            <p>{emailError}</p>
           </div>
 
           <div className="form_group">
