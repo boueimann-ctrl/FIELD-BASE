@@ -1,0 +1,21 @@
+
+:root {
+  /* FIELD//BASE brand */
+  --fb-bg: #111214;
+  --fb-surface: #1b1e22;
+  --fb-surface-hover: #24292d;
+
+  --fb-border: #343a40;
+  --fb-border-hover: #53616a;
+
+  --fb-text: #f5f7f8;
+  --fb-text-muted: #9ca6ad;
+
+  --fb-accent: #22c7ce;
+  --fb-accent-hover: #64e0e4;
+  --fb-accent-dark: #12363b;
+  --fb-accent-border: #28666c;
+
+  --fb-radius: 12px;
+  --fb-transition: 180ms ease;
+}

@@ -1,0 +1,104 @@
+
+/* FIELD//BASE - Field Card Actions */
+
+.fields_page .field_card_updated {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  background: #191c20;
+  border: 1px solid #343a40;
+  border-radius: 12px;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.fields_page .field_card_updated:hover {
+  border-color: #39757a;
+  transform: translateY(-2px);
+}
+
+.fields_page .field_card_main_link {
+  display: block;
+  flex: 1;
+  color: inherit;
+  text-decoration: none;
+}
+
+.fields_page .field_card_main_link:focus-visible,
+.fields_page .field_card_actions a:focus-visible {
+  outline: 2px solid #22c7ce;
+  outline-offset: -3px;
+}
+
+.fields_page .field_card_actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid #343a40;
+}
+
+.fields_page .field_card_actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.fields_page .field_card_detail_action {
+  background: #153136;
+  border: 1px solid #28666c;
+  color: #8ce3e7;
+}
+
+.fields_page .field_card_detail_action:hover {
+  background: #1b4146;
+  color: #c7f7f8;
+}
+
+.fields_page .field_card_map_action {
+  background: #24292e;
+  border: 1px solid #414950;
+  color: #d8e0e4;
+}
+
+.fields_page .field_card_map_action:hover {
+  background: #303940;
+  border-color: #22c7ce;
+  color: #ffffff;
+}
+
+@media (max-width: 480px) {
+  .fields_page .field_card_actions {
+    padding: 10px 12px 12px;
+    gap: 6px;
+  }
+
+  .fields_page .field_card_actions a {
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fields_page .field_card_updated,
+  .fields_page .field_card_actions a {
+    transition: none;
+  }
+
+  .fields_page .field_card_updated:hover {
+    transform: none;
+  }
+}
