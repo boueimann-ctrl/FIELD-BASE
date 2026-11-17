@@ -1,0 +1,65 @@
+
+name: FIELD BASE Data Monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore monitoring snapshots
+        uses: actions/cache/restore@v4
+        with:
+          path: frontend/data-monitor/snapshots.json
+          key: field-monitor-${{ github.run_id }}
+          restore-keys: |
+            field-monitor-
+
+      - name: Run FIELD BASE Data Monitor
+        run: python3 scripts/monitor/monitor.py
+
+      - name: Add report to job summary
+        if: always()
+        run: |
+          if [ -f data-monitor/report.md ]; then
+            cat data-monitor/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload monitoring reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: field-monitor-report-${{ github.run_id }}
+          path: |
+            frontend/data-monitor/report.md
+            frontend/data-monitor/report.json
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Save monitoring snapshots
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: frontend/data-monitor/snapshots.json
+          key: field-monitor-${{ github.run_id }}
+
