@@ -1,0 +1,301 @@
+
+/* ==========================================
+   FIELD//BASE - Light Field Detail
+   White / Charcoal / Teal
+========================================== */
+
+.field_detail_page {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #20262b;
+}
+
+.field_detail_page .field_detail_container {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 36px 0 100px;
+  color: #20262b;
+}
+
+/* Back link */
+
+.field_detail_page .field_detail_back {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 34px;
+  color: #64717b;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.field_detail_page .field_detail_back:hover {
+  color: #087e85;
+}
+
+/* Heading */
+
+.field_detail_page .field_detail_heading {
+  margin-bottom: 30px;
+}
+
+.field_detail_page .field_detail_eyebrow,
+.field_detail_page .field_detail_panel_label {
+  margin: 0 0 12px;
+  color: #087e85;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.field_detail_page .field_detail_heading h1 {
+  margin: 0;
+  color: #20262b;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.field_detail_page .field_detail_location {
+  margin: 14px 0 0;
+  color: #64717b;
+  font-size: 14px;
+}
+
+/* Main layout */
+
+.field_detail_page .field_detail_layout {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.7fr)
+    minmax(280px, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+
+.field_detail_page .field_detail_primary,
+.field_detail_page .field_detail_sidebar {
+  min-width: 0;
+}
+
+/* Image */
+
+.field_detail_page .fb_field_image_detail {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #f1f4f6;
+  border: 1px solid #e2e7eb;
+  border-radius: 12px;
+}
+
+.field_detail_page .fb_field_image_placeholder {
+  background: #f1f4f6;
+  color: #98a4ad;
+}
+
+.field_detail_page .fb_field_image_placeholder span {
+  color: #98a4ad;
+}
+
+.field_detail_page .fb_field_image_placeholder small {
+  color: #a7b0b7;
+}
+
+/* Content panels */
+
+.field_detail_page .field_detail_section,
+.field_detail_page .field_detail_panel {
+  background: #ffffff;
+  border: 1px solid #e2e7eb;
+  border-radius: 12px;
+  color: #20262b;
+  box-shadow: 0 3px 14px rgba(20, 30, 40, 0.04);
+}
+
+.field_detail_page .field_detail_section {
+  margin-top: 24px;
+  padding: 26px;
+}
+
+.field_detail_page .field_detail_section h2,
+.field_detail_page .field_detail_panel h2 {
+  margin: 0 0 18px;
+  color: #20262b;
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.field_detail_page .field_detail_section > p {
+  margin: 0;
+  color: #58636c;
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+/* Field information */
+
+.field_detail_page .field_detail_info {
+  margin: 0;
+}
+
+.field_detail_page .field_detail_info > div {
+  display: grid;
+  grid-template-columns: 135px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid #edf0f2;
+}
+
+.field_detail_page .field_detail_info > div:last-child {
+  border-bottom: none;
+}
+
+.field_detail_page .field_detail_info dt {
+  color: #7d8992;
+  font-size: 13px;
+}
+
+.field_detail_page .field_detail_info dd {
+  margin: 0;
+  color: #20262b;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+/* Sidebar */
+
+.field_detail_page .field_detail_sidebar {
+  display: grid;
+  gap: 18px;
+}
+
+.field_detail_page .field_detail_panel {
+  padding: 24px;
+}
+
+.field_detail_page .field_detail_address {
+  margin: 0 0 20px;
+  color: #58636c;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+/* White buttons */
+
+.field_detail_page .field_detail_button,
+.field_detail_page .field_detail_button:visited {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #d5dde2;
+  border-radius: 7px;
+  color: #20262b;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.field_detail_page .field_detail_button.primary,
+.field_detail_page .field_detail_button.primary:visited {
+  background: #ffffff;
+  border-color: #22c7ce;
+  color: #087e85;
+}
+
+.field_detail_page .field_detail_button.secondary,
+.field_detail_page .field_detail_button.secondary:visited {
+  background: #ffffff;
+  border-color: #d5dde2;
+  color: #20262b;
+}
+
+.field_detail_page .field_detail_button:hover,
+.field_detail_page .field_detail_button.primary:hover,
+.field_detail_page .field_detail_button.secondary:hover {
+  background: #eafafb;
+  border-color: #22c7ce;
+  color: #087e85;
+}
+
+/* Verification */
+
+.field_detail_page .field_detail_verification {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #edf0f2;
+  color: #64717b;
+  font-size: 12px;
+}
+
+.field_detail_page .field_detail_verification strong {
+  color: #20262b;
+}
+
+.field_detail_page .field_detail_source,
+.field_detail_page .field_detail_source:visited {
+  display: inline-block;
+  margin-top: 14px;
+  color: #087e85;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.field_detail_page .field_detail_muted,
+.field_detail_page .field_detail_notice {
+  color: #7d8992;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.field_detail_page .field_detail_notice {
+  margin: 16px 0 0;
+}
+
+.field_detail_page a:focus-visible {
+  outline: 2px solid #22c7ce;
+  outline-offset: 3px;
+}
+
+/* Responsive */
+
+@media (max-width: 850px) {
+  .field_detail_page .field_detail_layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .field_detail_page .field_detail_container {
+    width: calc(100% - 28px);
+    padding-top: 24px;
+  }
+
+  .field_detail_page .field_detail_section,
+  .field_detail_page .field_detail_panel {
+    padding: 18px;
+  }
+
+  .field_detail_page .field_detail_info > div {
+    grid-template-columns: 105px minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field_detail_page .field_detail_button {
+    transition: none;
+  }
+}

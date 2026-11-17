@@ -1,0 +1,219 @@
+/* =========================================
+   FIELD//BASE - Mobile Field Cards
+========================================= */
+
+@media (max-width: 768px) {
+
+  /* カード一覧 */
+  .fields_page .fields_grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    margin-top: 16px;
+  }
+
+  /* カード全体 */
+  .fields_page .field_card.field_card_updated {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+
+    background: #ffffff;
+    border: 1px solid #e4e9ed;
+    border-radius: 16px;
+
+    box-shadow: 0 5px 20px rgba(20, 30, 40, 0.05);
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .fields_page .field_card.field_card_updated:active {
+    transform: scale(0.99);
+  }
+
+  /* カードのメインリンク */
+  .fields_page .field_card_main_link {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* 画像エリア */
+  .fields_page .field_card_main_link > img,
+  .fields_page .field_card_main_link > picture,
+  .fields_page .field_card_main_link > .field_image,
+  .fields_page .field_card_main_link > .field_image_wrapper {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    overflow: hidden;
+  }
+
+  .fields_page .field_card_main_link > picture img,
+  .fields_page .field_card_main_link > .field_image img,
+  .fields_page .field_card_main_link > .field_image_wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* 本文 */
+  .fields_page .field_card_body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 18px 16px 16px;
+  }
+
+  /* 地域 */
+  .fields_page .field_card_body .field_location {
+    margin: 0;
+    color: #087e85;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  /* フィールド名 */
+  .fields_page .field_card_body h2 {
+    margin: 0;
+    color: #1b242a;
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  /* 説明文 */
+  .fields_page .field_card_body > p:not(
+    .field_location,
+    .field_price,
+    .near_me_distance
+  ) {
+    margin: 0;
+    color: #66737d;
+    font-size: 13px;
+    line-height: 1.75;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
+  /* 現在地からの距離 */
+  .fields_page .field_card_body .near_me_distance {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: #087e85;
+  }
+
+  /* タグ */
+  .fields_page .field_card_body .field_tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 0 0;
+  }
+
+  .fields_page .field_card_body .field_tags span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 27px;
+    padding: 5px 9px;
+
+    background: #f0f5f6;
+    border: 1px solid #e3eaed;
+    border-radius: 6px;
+
+    color: #50636c;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  /* 料金 */
+  .fields_page .field_card_body .field_price {
+    margin: 8px 0 0;
+    color: #19272d;
+    font-size: 23px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  /* 下部アクション */
+  .fields_page .field_card_actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+
+    padding: 12px 16px 16px;
+    border-top: 1px solid #edf1f3;
+  }
+
+  .fields_page .field_card_actions a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 8px;
+
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  /* 詳細ボタン */
+  .fields_page .field_card_detail_action {
+    background: #19272d;
+    color: #ffffff;
+    border: 1px solid #19272d;
+  }
+
+  /* Googleマップ */
+  .fields_page .field_card_map_action {
+    background: #ffffff;
+    color: #087e85;
+    border: 1px solid #b7dfe2;
+  }
+
+  .fields_page .field_card_actions a:focus-visible {
+    outline: 2px solid #22c7ce;
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fields_page .fields_grid {
+    gap: 16px;
+  }
+
+  .fields_page .field_card_body h2 {
+    font-size: 18px;
+  }
+
+  .fields_page .field_card_body .field_price {
+    font-size: 21px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fields_page .field_card.field_card_updated {
+    transition: none;
+  }
+}

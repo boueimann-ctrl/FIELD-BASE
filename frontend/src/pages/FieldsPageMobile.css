@@ -1,0 +1,92 @@
+/* ========================================
+   FIELD//BASE
+   Mobile List / Map Switch
+======================================== */
+
+/* PCでは従来どおり地図と一覧を両方表示 */
+
+.fields_mobile_view_switch {
+  display: none;
+}
+
+.fields_map_area,
+.fields_list_area {
+  min-width: 0;
+}
+
+/* スマホ・タブレット */
+
+@media (max-width: 768px) {
+  .fields_page .fields_mobile_view_switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+
+    margin: 28px 0 20px;
+    padding: 5px;
+
+    background: #f0f4f6;
+    border: 1px solid #e1e7eb;
+    border-radius: 12px;
+  }
+
+  .fields_page .fields_mobile_view_switch button {
+    min-height: 44px;
+    padding: 10px 12px;
+
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+
+    color: #64717b;
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+  }
+
+  .fields_page .fields_mobile_view_switch button.active {
+    background: #ffffff;
+    color: #087e85;
+    box-shadow: 0 2px 8px rgba(20, 30, 40, 0.08);
+  }
+
+  .fields_page .fields_mobile_view_switch button:focus-visible {
+    outline: 2px solid #22c7ce;
+    outline-offset: 2px;
+  }
+
+  /* 非選択側を非表示 */
+  .fields_page .fields_map_area,
+  .fields_page .fields_list_area {
+    display: none;
+  }
+
+  .fields_page .fields_map_area.mobile_visible,
+  .fields_page .fields_list_area.mobile_visible {
+    display: block;
+  }
+
+  /* 地図モードをスマホ向けの高さに調整 */
+  .fields_page .fields_map_area .field_map_wrapper,
+  .fields_page .fields_map_area .field_map {
+    height: min(55vh, 500px);
+    min-height: 300px;
+  }
+
+  .fields_page .fields_map_area .field_map_section {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .fields_page .fields_mobile_view_switch {
+    margin-top: 20px;
+  }
+
+  .fields_page .fields_map_area .field_map_wrapper,
+  .fields_page .fields_map_area .field_map {
+    height: 48vh;
+    min-height: 300px;
+  }
+}

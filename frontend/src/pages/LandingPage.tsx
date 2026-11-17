@@ -1,6 +1,10 @@
-
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+
+import SiteLogo from '../components/SiteLogo'
+
+import './LandingPageLogo.css'
+import './LandingPageContact.css'
 
 function LandingPage() {
   const navigate = useNavigate()
@@ -21,14 +25,22 @@ function LandingPage() {
   return (
     <div className="home_page">
       <header className="site_header">
-        <Link to="/" className="site_logo">
-          FIELD//BASE
-        </Link>
+        <SiteLogo />
 
-        <nav className="site_nav" aria-label="メインナビゲーション">
-          <Link to="/fields">EXPLORE</Link>
+        <nav
+          className="site_nav"
+          aria-label="メインナビゲーション"
+        >
+          <Link to="/fields">
+            フィールド検索
+          </Link>
+
+          <Link to="/contact">
+            お問い合わせ
+          </Link>
+
           <Link to="/login" className="nav_login">
-            LOGIN
+            ログイン
           </Link>
         </nav>
       </header>
@@ -36,6 +48,18 @@ function LandingPage() {
       <main>
         <section className="hero_section">
           <div className="hero_content">
+            <div className="hero_brand">
+              <img
+                src="/fieldbase-mark.png"
+                alt="FIELD//BASE カマキリのロゴ"
+                className="hero_brand_image"
+              />
+
+              <span className="hero_brand_name">
+                FIELD<span>//</span>BASE
+              </span>
+            </div>
+
             <p className="hero_eyebrow">
               DISCOVER YOUR NEXT FIELD.
             </p>
@@ -68,10 +92,32 @@ function LandingPage() {
                 />
 
                 <button type="submit">
-                  SEARCH FIELDS
+                  検索
                 </button>
               </div>
             </form>
+
+            <div className="hero_contact">
+              <span>
+                掲載情報の間違いやご意見はこちら
+              </span>
+
+              <Link to="/contact">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect
+                    x="3"
+                    y="5"
+                    width="18"
+                    height="14"
+                    rx="2"
+                  />
+                  <path d="m3 7 9 7 9-7" />
+                </svg>
+
+                お問い合わせ・情報修正依頼
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -81,18 +127,19 @@ function LandingPage() {
               <p className="section_eyebrow">
                 FIND YOUR NEXT EXPERIENCE
               </p>
+
               <h2>EXPLORE FIELDS</h2>
             </div>
 
             <Link to="/fields" className="text_link">
-              VIEW ALL →
+              すべてのフィールドを見る →
             </Link>
           </div>
 
           <div className="feature_grid">
             <article className="feature_card">
               <span className="feature_number">01</span>
-              <h3>SEARCH</h3>
+              <h3>検索</h3>
               <p>
                 地域やフィールド名から、
                 自分に合った場所を探す。
@@ -101,7 +148,7 @@ function LandingPage() {
 
             <article className="feature_card">
               <span className="feature_number">02</span>
-              <h3>COMPARE</h3>
+              <h3>比較する</h3>
               <p>
                 料金や設備、レンタル情報を
                 比較して選ぶ。
@@ -110,7 +157,7 @@ function LandingPage() {
 
             <article className="feature_card">
               <span className="feature_number">03</span>
-              <h3>PLAY</h3>
+              <h3>楽しむ</h3>
               <p>
                 気になるフィールドを見つけて、
                 次のゲームへ。
@@ -121,8 +168,20 @@ function LandingPage() {
       </main>
 
       <footer className="site_footer">
-        <span>FIELD//BASE</span>
+        <div className="footer_brand">
+          <img
+            src="/fieldbase-mark.png"
+            alt=""
+            className="footer_brand_image"
+          />
+          <span>FIELD//BASE</span>
+        </div>
+
         <span>MAKE THE FIELD PART OF LIFE.</span>
+
+        <Link to="/contact">
+          お問い合わせ
+        </Link>
       </footer>
     </div>
   )

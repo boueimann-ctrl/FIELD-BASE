@@ -1,0 +1,144 @@
+
+/* FIELD//BASE - Information Status */
+
+.fb_status_compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #64717b;
+  font-size: 11px;
+}
+
+.fb_status_compact strong {
+  color: #20262b;
+  font-size: 11px;
+}
+
+.fb_status_track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf0f2;
+}
+
+.fb_status_compact .fb_status_track {
+  flex: 1;
+  min-width: 30px;
+  max-width: 90px;
+}
+
+.fb_status_fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #22c7ce;
+  transition: width 0.2s ease;
+}
+
+.fb_status_full {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid #e2e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #20262b;
+}
+
+.fb_status_heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.fb_status_eyebrow {
+  margin: 0 0 8px;
+  color: #087e85;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.fb_status_heading h2 {
+  margin: 0;
+  color: #20262b;
+  font-size: 17px;
+}
+
+.fb_status_heading > span {
+  color: #64717b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fb_status_full > .fb_status_track {
+  height: 6px;
+  margin-bottom: 22px;
+}
+
+.fb_status_items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fb_status_item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fb_status_indicator {
+  display: flex;
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #edf0f2;
+  color: #87949d;
+  font-size: 11px;
+}
+
+.fb_status_indicator.ready {
+  background: #eafafb;
+  color: #087e85;
+}
+
+.fb_status_item_label {
+  color: #20262b;
+  font-size: 12px;
+}
+
+.fb_status_item_value {
+  margin-left: auto;
+  color: #64717b;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.fb_status_disclaimer {
+  margin: 20px 0 0;
+  color: #87949d;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+@media (max-width: 480px) {
+  .fb_status_full {
+    padding: 18px;
+  }
+
+  .fb_status_items {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb_status_fill {
+    transition: none;
+  }
+}

@@ -1,0 +1,67 @@
+/* ========================================
+   FIELD//BASE
+   Landing Page Logo
+======================================== */
+
+.home_page .hero_brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.home_page .hero_brand_image {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.home_page .hero_brand_name {
+  color: #111214;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.045em;
+}
+
+.home_page .hero_brand_name span {
+  color: #087e85;
+}
+
+/* Footer */
+
+.home_page .footer_brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.home_page .footer_brand_image {
+  display: block;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .home_page .hero_brand {
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .home_page .hero_brand_image {
+    width: 54px;
+    height: 54px;
+  }
+
+  .home_page .hero_brand_name {
+    font-size: 20px;
+  }
+
+  .home_page .footer_brand_image {
+    width: 28px;
+    height: 28px;
+  }
+}

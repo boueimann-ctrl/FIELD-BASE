@@ -1,0 +1,127 @@
+/* ========================================
+   FIELD//BASE - Mobile Filter Chips
+======================================== */
+
+/* PC版は従来のフィルターを維持 */
+
+@media (max-width: 768px) {
+
+  /* 検索エリア全体 */
+  .fields_page .fields_filters {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 28px 0 20px;
+  }
+
+  /* 検索欄 */
+  .fields_page .fields_filters > input[type="search"] {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    padding: 14px 16px;
+    border: 1px solid #dbe3e8;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #20262b;
+    font-size: 16px;
+    outline: none;
+  }
+
+  .fields_page .fields_filters > input[type="search"]:focus {
+    border-color: #22c7ce;
+    box-shadow: 0 0 0 3px rgba(34, 199, 206, 0.12);
+  }
+
+  /* 地域選択 */
+  .fields_page .fields_filters > select {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 12px 14px;
+    border: 1px solid #dbe3e8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #20262b;
+    font-size: 14px;
+  }
+
+  /* チップ */
+  .fields_page .fields_filters > label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    gap: 8px;
+
+    min-height: 44px;
+    padding: 10px 14px;
+
+    border: 1px solid #dbe3e8;
+    border-radius: 999px;
+    background: #ffffff;
+
+    color: #52616a;
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+    transition:
+      background 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .fields_page .fields_filters > label:has(input:checked) {
+    background: #eafafb;
+    border-color: #22c7ce;
+    color: #087e85;
+  }
+
+  .fields_page .fields_filters > label:has(input:focus-visible) {
+    outline: 2px solid #22c7ce;
+    outline-offset: 3px;
+  }
+
+  .fields_page .fields_filters > label input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: #087e85;
+  }
+
+  /* チップは横並びを維持 */
+  .fields_page .fields_filters > label {
+    max-width: 100%;
+  }
+
+  /* 現在地ボタン */
+  .fields_page .near_me_button {
+    min-height: 46px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+}
+
+@media (max-width: 480px) {
+  .fields_page .fields_filters {
+    gap: 8px;
+    margin-top: 22px;
+  }
+
+  .fields_page .fields_filters > label {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fields_page .fields_filters > label {
+    transition: none;
+  }
+}

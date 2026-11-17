@@ -1,51 +1,125 @@
 
-/* FIELD//BASE - Field Card Actions */
+/* FIELD//BASE - Light Field Cards */
 
-.fields_page .field_card_updated {
+.fields_page .field_card.field_card_updated {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   min-width: 0;
-  background: #191c20;
-  border: 1px solid #343a40;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e2e7eb;
   border-radius: 12px;
+  color: #20262b;
+  box-shadow: 0 3px 14px rgba(20, 30, 40, 0.04);
   transition:
     border-color 0.2s ease,
+    box-shadow 0.2s ease,
     transform 0.2s ease;
 }
 
-.fields_page .field_card_updated:hover {
-  border-color: #39757a;
+.fields_page .field_card.field_card_updated:hover {
+  border-color: #22c7ce;
+  box-shadow: 0 8px 24px rgba(20, 30, 40, 0.09);
   transform: translateY(-2px);
 }
 
-.fields_page .field_card_main_link {
+.fields_page .field_card_updated .field_card_main_link,
+.fields_page .field_card_updated .field_card_main_link:visited {
   display: block;
   flex: 1;
-  color: inherit;
+  color: #20262b;
   text-decoration: none;
 }
 
-.fields_page .field_card_main_link:focus-visible,
-.fields_page .field_card_actions a:focus-visible {
-  outline: 2px solid #22c7ce;
-  outline-offset: -3px;
+/* 画像未設定時 */
+.fields_page .field_card_updated .field_image_placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f4f6;
+  color: #98a4ad;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
 }
 
-.fields_page .field_card_actions {
+/* カード本文 */
+.fields_page .field_card_updated .field_card_body {
+  color: #4b5660;
+}
+
+.fields_page .field_card_updated .field_card_body h2 {
+  margin: 10px 0;
+  color: #20262b;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.fields_page .field_card_updated .field_card_body p {
+  color: #58636c;
+  line-height: 1.75;
+}
+
+.fields_page .field_card_updated .field_card_body .field_location {
+  color: #7d8992;
+  font-size: 12px;
+}
+
+.fields_page .field_card_updated .field_card_body .field_price {
+  color: #20262b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.fields_page .field_card_updated .field_card_body .near_me_distance {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 10px;
+  background: #eafafb;
+  border: 1px solid #bcebef;
+  border-radius: 5px;
+  color: #087e85;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* タグ */
+.fields_page .field_card_updated .field_tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 14px 0;
+}
+
+.fields_page .field_card_updated .field_tags span {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  background: #f3f6f8;
+  border: 1px solid #e1e7eb;
+  border-radius: 5px;
+  color: #52616a;
+  font-size: 11px;
+}
+
+/* カード下部のボタン */
+.fields_page .field_card_updated .field_card_actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  margin-top: auto;
   padding: 12px 16px 16px;
-  border-top: 1px solid #343a40;
+  border-top: 1px solid #edf0f2;
+  background: #ffffff;
 }
 
-.fields_page .field_card_actions a {
+.fields_page .field_card_updated .field_card_actions a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 38px;
+  min-height: 40px;
   padding: 8px 10px;
   border-radius: 7px;
   font-size: 12px;
@@ -58,47 +132,51 @@
     color 0.2s ease;
 }
 
-.fields_page .field_card_detail_action {
-  background: #153136;
-  border: 1px solid #28666c;
-  color: #8ce3e7;
+/* 詳細ボタン：白基調 */
+.fields_page .field_card_updated .field_card_detail_action {
+  background: #ffffff;
+  border: 1px solid #d5dde2;
+  color: #20262b;
 }
 
-.fields_page .field_card_detail_action:hover {
-  background: #1b4146;
-  color: #c7f7f8;
-}
-
-.fields_page .field_card_map_action {
-  background: #24292e;
-  border: 1px solid #414950;
-  color: #d8e0e4;
-}
-
-.fields_page .field_card_map_action:hover {
-  background: #303940;
+.fields_page .field_card_updated .field_card_detail_action:hover {
+  background: #f1fbfc;
   border-color: #22c7ce;
-  color: #ffffff;
+  color: #087e85;
+}
+
+/* 地図ボタン：白基調 */
+.fields_page .field_card_updated .field_card_map_action {
+  background: #ffffff;
+  border: 1px solid #d5dde2;
+  color: #20262b;
+}
+
+.fields_page .field_card_updated .field_card_map_action:hover {
+  background: #f1fbfc;
+  border-color: #22c7ce;
+  color: #087e85;
+}
+
+.fields_page .field_card_updated a:focus-visible {
+  outline: 2px solid #22c7ce;
+  outline-offset: 2px;
 }
 
 @media (max-width: 480px) {
-  .fields_page .field_card_actions {
+  .fields_page .field_card_updated .field_card_actions {
     padding: 10px 12px 12px;
     gap: 6px;
-  }
-
-  .fields_page .field_card_actions a {
-    font-size: 11px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fields_page .field_card_updated,
-  .fields_page .field_card_actions a {
+  .fields_page .field_card.field_card_updated,
+  .fields_page .field_card_updated .field_card_actions a {
     transition: none;
   }
 
-  .fields_page .field_card_updated:hover {
+  .fields_page .field_card.field_card_updated:hover {
     transform: none;
   }
 }

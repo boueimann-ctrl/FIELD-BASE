@@ -5,16 +5,23 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { fields } from '../data/fields'
 import { attachFieldLocations } from '../data/fieldLocations'
 import { attachFieldVerification } from '../data/fieldVerification'
+
 import FieldMap from '../components/FieldMap'
+import FieldImage from '../components/FieldImage'
+import FieldStatus from '../components/FieldStatus'
+import SiteLogo from '../components/SiteLogo'
 
 import {
   calculateDistance,
   type Coordinates,
 } from '../utils/distance'
+
 import { getGoogleMapsUrl } from '../utils/maps'
 
 import './FieldsPageNearMe.css'
 import './FieldsPageCards.css'
+import './FieldsPageMobile.css'
+import './FieldsPageContact.css'
 
 const allFields = attachFieldLocations(
   attachFieldVerification(fields)
@@ -26,11 +33,16 @@ type FieldWithDistance = {
 }
 
 function FieldsPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [keyword, setKeyword] = useState(
-    () => searchParams.get('q') ?? ''
-  )
+  const urlKeyword = searchParams.get('q') ?? ''
+
+  const viewMode =
+    searchParams.get('view') === 'map' ? 'map' : 'list'
+
+  // 日本語入力中はURLを更新せずReactのstateで管理
+  const [keyword, setKeyword] = useState(urlKeyword)
+
   const [prefecture, setPrefecture] = useState('')
   const [indoorOnly, setIndoorOnly] = useState(false)
   const [rentalOnly, setRentalOnly] = useState(false)
@@ -41,6 +53,24 @@ function FieldsPage() {
   const [nearMeMode, setNearMeMode] = useState(false)
   const [locationLoading, setLocationLoading] = useState(false)
   const [locationError, setLocationError] = useState('')
+
+  const updateViewMode = (mode: 'list' | 'map') => {
+    const nextParams = new URLSearchParams(searchParams)
+
+    if (keyword.trim()) {
+      nextParams.set('q', keyword.trim())
+    } else {
+      nextParams.delete('q')
+    }
+
+    if (mode === 'map') {
+      nextParams.set('view', 'map')
+    } else {
+      nextParams.delete('view')
+    }
+
+    setSearchParams(nextParams, { replace: true })
+  }
 
   const prefectures = [
     ...new Set(allFields.map((field) => field.prefecture)),
@@ -143,6 +173,7 @@ function FieldsPage() {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         })
+
         setNearMeMode(true)
         setLocationLoading(false)
       },
@@ -187,14 +218,17 @@ function FieldsPage() {
   return (
     <div className="fields_page">
       <header className="site_header">
-        <Link to="/" className="site_logo">
-          FIELD//BASE
-        </Link>
+        <SiteLogo />
 
-        <nav className="site_nav">
-          <Link to="/">HOME</Link>
+        <nav
+          className="site_nav"
+          aria-label="メインナビゲーション"
+        >
+          <Link to="/">ホーム</Link>
+          <Link to="/fields">フィールド検索</Link>
+          <Link to="/contact">お問い合わせ</Link>
           <Link to="/login" className="nav_login">
-            LOGIN
+            ログイン
           </Link>
         </nav>
       </header>
@@ -229,6 +263,7 @@ function FieldsPage() {
             }
           >
             <option value="">すべての地域</option>
+
             {prefectures.map((name) => (
               <option key={name} value={name}>
                 {name}
@@ -298,98 +333,181 @@ function FieldsPage() {
           )}
         </div>
 
+        <div
+          className="fields_mobile_view_switch"
+          role="group"
+          aria-label="フィールド表示方法"
+        >
+          <button
+            type="button"
+            className={
+              viewMode === 'list' ? 'active' : ''
+            }
+            aria-pressed={viewMode === 'list'}
+            onClick={() => updateViewMode('list')}
+          >
+            一覧で探す
+          </button>
+
+          <button
+            type="button"
+            className={
+              viewMode === 'map' ? 'active' : ''
+            }
+            aria-pressed={viewMode === 'map'}
+            onClick={() => updateViewMode('map')}
+          >
+            地図で探す
+          </button>
+        </div>
+
         <p className="fields_count">
           {filteredFields.length} FIELDS FOUND
         </p>
 
-        <FieldMap fields={mappedFields} />
-
-        <div className="fields_grid">
-          {filteredFields.map(({ field, distance }) => (
-            <article
-              className="field_card field_card_updated"
-              key={field.id}
-            >
-              <Link
-                to={`/fields/${field.id}`}
-                className="field_card_main_link"
-                aria-label={`${field.name}の詳細を見る`}
-              >
-                <div className="field_image_placeholder">
-                  FIELD//BASE
-                </div>
-
-                <div className="field_card_body">
-                  <p className="field_location">
-                    {field.prefecture} / {field.city}
-                  </p>
-
-                  <h2>{field.name}</h2>
-
-                  {nearMeMode && (
-                    <p className="near_me_distance">
-                      {distance !== null
-                        ? `現在地から約${distance.toFixed(1)}km`
-                        : '距離未確認'}
-                    </p>
-                  )}
-
-                  <p>{field.description}</p>
-
-                  <div className="field_tags">
-                    <span>
-                      {field.indoor ? '屋内' : '屋外'}
-                    </span>
-
-                    {field.rental === true && (
-                      <span>レンタルあり</span>
-                    )}
-
-                    {field.beginnerFriendly === true && (
-                      <span>初心者向け</span>
-                    )}
-                  </div>
-
-                  <p className="field_price">
-                    {field.price === null
-                      ? '料金未確認'
-                      : `¥${field.price.toLocaleString()}〜`}
-                  </p>
-                </div>
-              </Link>
-
-              <div className="field_card_actions">
-                <Link
-                  to={`/fields/${field.id}`}
-                  className="field_card_detail_action"
-                >
-                  詳細を見る
-                  <span aria-hidden="true">→</span>
-                </Link>
-
-                <a
-                  href={getGoogleMapsUrl(field)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="field_card_map_action"
-                  aria-label={`${field.name}をGoogleマップで検索`}
-                >
-                  地図で確認
-                  <span aria-hidden="true">↗</span>
-                </a>
-              </div>
-            </article>
-          ))}
+        <div
+          className={
+            viewMode === 'map'
+              ? 'fields_map_area mobile_visible'
+              : 'fields_map_area'
+          }
+        >
+          <FieldMap fields={mappedFields} />
         </div>
 
-        {filteredFields.length === 0 && (
-          <div className="fields_empty">
-            <p>条件に一致するフィールドがありません。</p>
-            <button type="button" onClick={resetFilters}>
-              条件をリセット
-            </button>
+        <div
+          className={
+            viewMode === 'list'
+              ? 'fields_list_area mobile_visible'
+              : 'fields_list_area'
+          }
+        >
+          <div className="fields_grid">
+            {filteredFields.map(({ field, distance }) => (
+              <article
+                className="field_card field_card_updated"
+                key={field.id}
+              >
+                <Link
+                  to={`/fields/${field.id}`}
+                  className="field_card_main_link"
+                  aria-label={`${field.name}の詳細を見る`}
+                >
+                  <FieldImage
+                    fieldId={field.id}
+                    fieldName={field.name}
+                    imageUrl={field.imageUrl}
+                  />
+
+                  <div className="field_card_body">
+                    <p className="field_location">
+                      {field.prefecture} / {field.city}
+                    </p>
+
+                    <h2>{field.name}</h2>
+
+                    {nearMeMode && (
+                      <p className="near_me_distance">
+                        {distance !== null
+                          ? `現在地から約${distance.toFixed(1)}km`
+                          : '距離未確認'}
+                      </p>
+                    )}
+
+                    <p>{field.description}</p>
+
+                    <div className="field_tags">
+                      <span>
+                        {field.indoor ? '屋内' : '屋外'}
+                      </span>
+
+                      {field.rental === true && (
+                        <span>レンタルあり</span>
+                      )}
+
+                      {field.beginnerFriendly === true && (
+                        <span>初心者向け</span>
+                      )}
+                    </div>
+
+                    <p className="field_price">
+                      {field.price === null
+                        ? '料金未確認'
+                        : `¥${field.price.toLocaleString()}〜`}
+                    </p>
+
+                    <FieldStatus
+                      field={field}
+                      variant="compact"
+                    />
+                  </div>
+                </Link>
+
+                <div className="field_card_actions">
+                  <Link
+                    to={`/fields/${field.id}`}
+                    className="field_card_detail_action"
+                  >
+                    詳細を見る
+                    <span aria-hidden="true">→</span>
+                  </Link>
+
+                  <a
+                    href={getGoogleMapsUrl(field)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="field_card_map_action"
+                    aria-label={`${field.name}をGoogleマップで検索`}
+                  >
+                    地図で確認
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                </div>
+              </article>
+            ))}
           </div>
-        )}
+
+          {filteredFields.length === 0 && (
+            <div className="fields_empty">
+              <p>条件に一致するフィールドがありません。</p>
+              <button
+                type="button"
+                onClick={resetFilters}
+              >
+                条件をリセット
+              </button>
+            </div>
+          )}
+        </div>
+
+        <section
+          className="fields_contact_section"
+          aria-labelledby="fields-contact-title"
+        >
+          <div className="fields_contact_content">
+            <span className="fields_contact_eyebrow">
+              SUPPORT / CONTACT
+            </span>
+
+            <h2 id="fields-contact-title">
+              掲載情報について
+            </h2>
+
+            <p>
+              フィールド情報の誤りや掲載内容の修正、
+              サービスへのご意見・ご要望がありましたら、
+              お問い合わせフォームからお知らせください。
+            </p>
+          </div>
+
+          <Link
+            to="/contact"
+            className="fields_contact_button"
+          >
+            お問い合わせ・情報修正依頼
+            <span aria-hidden="true">→</span>
+          </Link>
+        </section>
       </main>
     </div>
   )

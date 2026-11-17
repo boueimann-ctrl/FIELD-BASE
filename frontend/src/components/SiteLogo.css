@@ -1,0 +1,46 @@
+.fb_site_logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  text-decoration: none;
+  color: #111214;
+}
+
+.fb_site_logo_image {
+  display: block;
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+
+.fb_site_logo_text {
+  color: #111214;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+
+.fb_site_logo_slashes {
+  color: #087e85;
+}
+
+.fb_site_logo:hover {
+  opacity: 0.8;
+}
+
+@media (max-width: 480px) {
+  .fb_site_logo {
+    gap: 6px;
+  }
+
+  .fb_site_logo_image {
+    width: 36px;
+    height: 36px;
+  }
+
+  .fb_site_logo_text {
+    font-size: 16px;
+  }
+}

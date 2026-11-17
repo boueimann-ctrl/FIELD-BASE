@@ -1,0 +1,290 @@
+/* =========================================
+   FIELD//BASE - Mobile Field Detail
+========================================= */
+
+@media (max-width: 768px) {
+
+  .field_detail_page {
+    min-width: 0;
+    background: #f8fafb;
+  }
+
+  .field_detail_container {
+    width: 100%;
+    max-width: 100%;
+    padding: 20px 16px 120px;
+    box-sizing: border-box;
+  }
+
+  /* 戻るリンク */
+
+  .field_detail_back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-bottom: 20px;
+    color: #087e85;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  /* 見出し */
+
+  .field_detail_heading {
+    margin-bottom: 20px;
+  }
+
+  .field_detail_eyebrow {
+    margin-bottom: 8px;
+    color: #087e85;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  .field_detail_heading h1 {
+    margin: 0 0 10px;
+    color: #19272d;
+    font-size: clamp(24px, 6vw, 32px);
+    font-weight: 800;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .field_detail_location {
+    margin: 0;
+    color: #64717b;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  /* 2カラムを1カラムに変更 */
+
+  .field_detail_layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .field_detail_primary,
+  .field_detail_sidebar {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* メイン画像 */
+
+  .field_detail_hero {
+    overflow: hidden;
+    margin-bottom: 20px;
+    border-radius: 16px;
+    background: #e8eef0;
+  }
+
+  .field_detail_hero img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+  }
+
+  /* セクション */
+
+  .field_detail_section {
+    margin-bottom: 16px;
+    padding: 20px 16px;
+    border: 1px solid #e5ebee;
+    border-radius: 14px;
+    background: #ffffff;
+  }
+
+  .field_detail_section h2 {
+    margin: 0 0 14px;
+    color: #19272d;
+    font-size: 17px;
+    font-weight: 800;
+  }
+
+  .field_detail_section > p {
+    margin: 0;
+    color: #53636d;
+    font-size: 14px;
+    line-height: 1.85;
+    overflow-wrap: anywhere;
+  }
+
+  /* 基本情報 */
+
+  .field_detail_info {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+  }
+
+  .field_detail_info > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 0;
+    border-bottom: 1px solid #edf1f3;
+  }
+
+  .field_detail_info > div:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .field_detail_info dt {
+    color: #7a8790;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .field_detail_info dd {
+    margin: 0;
+    color: #243139;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  /* 料金を強調 */
+
+  .field_detail_info > div:nth-child(3) dd {
+    color: #087e85;
+    font-size: 22px;
+    font-weight: 800;
+  }
+
+  /* サイドバー */
+
+  .field_detail_sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .field_detail_panel {
+    padding: 20px 16px;
+    border: 1px solid #e5ebee;
+    border-radius: 14px;
+    background: #ffffff;
+  }
+
+  .field_detail_panel_label {
+    margin: 0 0 8px;
+    color: #087e85;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+  }
+
+  .field_detail_panel h2 {
+    margin: 0 0 14px;
+    color: #19272d;
+    font-size: 17px;
+    font-weight: 800;
+  }
+
+  .field_detail_address {
+    margin-bottom: 16px;
+    color: #53636d;
+    font-size: 13px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+  }
+
+  /* アクションボタン */
+
+  .field_detail_button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px;
+    box-sizing: border-box;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .field_detail_button.primary {
+    background: #19272d;
+    color: #ffffff;
+  }
+
+  .field_detail_button.secondary {
+    background: #ffffff;
+    border: 1px solid #b7dfe2;
+    color: #087e85;
+  }
+
+  .field_detail_notice {
+    color: #7a8790;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  .field_detail_verification {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0;
+  }
+
+  /* 固定経路案内ボタン */
+
+  .field_detail_mobile_action {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    z-index: 900;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 10px 16px;
+
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid #e2e7eb;
+    box-shadow: 0 -4px 18px rgba(20, 30, 40, 0.06);
+    backdrop-filter: blur(12px);
+  }
+
+  .field_detail_mobile_action a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+
+    min-height: 48px;
+    padding: 12px;
+    box-sizing: border-box;
+
+    border-radius: 10px;
+    background: #087e85;
+    color: #ffffff;
+
+    font-size: 14px;
+    font-weight: 800;
+    text-decoration: none;
+  }
+}
+
+/* PCでは固定ボタンを非表示 */
+
+@media (min-width: 769px) {
+  .field_detail_mobile_action {
+    display: none;
+  }
+}

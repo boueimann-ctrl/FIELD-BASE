@@ -1,7 +1,13 @@
-import './styles/theme.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+
 import './index.css'
+import './App.css'
+import './styles/theme.css'
+import './styles/mobile.css'
+import './pages/FieldsPageChips.css'
+import './pages/FieldsPageMobileCards.css'
+
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(

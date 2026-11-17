@@ -1,0 +1,57 @@
+
+.fb_field_image {
+  width: 100%;
+  overflow: hidden;
+  background: #f1f4f6;
+}
+
+.fb_field_image_card {
+  aspect-ratio: 16 / 9;
+}
+
+.fb_field_image_detail {
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+}
+
+.fb_field_image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.field_card_updated:hover .fb_field_image img {
+  transform: scale(1.035);
+}
+
+.fb_field_image_placeholder {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #f1f4f6;
+  color: #98a4ad;
+}
+
+.fb_field_image_placeholder span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.fb_field_image_placeholder small {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #a7b0b7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb_field_image img {
+    transition: none;
+  }
+}

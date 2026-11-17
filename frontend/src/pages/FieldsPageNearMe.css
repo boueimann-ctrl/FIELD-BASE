@@ -1,173 +1,25 @@
 
-/* FIELD//BASE - Compact Near Me */
+/* Light style overrides */
 
-.near_me_controls {
-  --near-accent: #22c7ce;
-
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-
-  margin: 12px 0 18px;
-  padding: 0;
-
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
+.fields_page .near_me_button {
+  background: #ffffff;
+  color: #263238;
+  border: 1px solid #d5dde2;
 }
 
-/* 以前の装飾を完全に無効化 */
-.near_me_controls::before,
-.near_me_controls::after {
-  content: none;
-  display: none;
+.fields_page .near_me_button:hover {
+  background: #f1fbfc;
+  border-color: #22c7ce;
+  color: #087e85;
 }
 
-.near_me_controls .near_me_button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  min-height: 38px;
-  width: auto;
-  padding: 8px 14px;
-
-  background: #1b1e22;
-  color: #dce2e5;
-  border: 1px solid #3b4248;
-  border-radius: 7px;
-
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  line-height: 1.4;
-
-  cursor: pointer;
-  box-shadow: none;
-
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease;
+.fields_page .near_me_button.active {
+  background: #eafafb;
+  border-color: #22c7ce;
+  color: #087e85;
 }
 
-.near_me_controls .near_me_button::before {
-  content: "⌖";
-  display: inline-block;
-  color: var(--near-accent);
-  font-size: 18px;
-  line-height: 1;
-}
-
-.near_me_controls .near_me_button:hover:not(:disabled) {
-  background: #252b30;
-  color: #ffffff;
-  border-color: #537078;
-  box-shadow: none;
-  transform: none;
-}
-
-.near_me_controls .near_me_button.active {
-  background: #153136;
-  color: #a6edef;
-  border-color: #28666c;
-  box-shadow: none;
-}
-
-.near_me_controls .near_me_button.active::before {
-  content: "✓";
-  color: var(--near-accent);
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.near_me_controls .near_me_button.active:hover:not(:disabled) {
-  background: #1b3e43;
-  border-color: var(--near-accent);
-}
-
-.near_me_controls .near_me_button:focus-visible {
-  outline: 2px solid var(--near-accent);
-  outline-offset: 3px;
-}
-
-.near_me_controls .near_me_button:disabled {
-  opacity: 0.55;
-  cursor: wait;
-}
-
-.near_me_controls .near_me_status {
-  margin: 0;
-  padding: 0;
-  color: #929da4;
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.near_me_controls .near_me_note {
-  flex-basis: 100%;
-  margin: 0;
-  padding: 0;
-
-  color: #77848c;
-  border: none;
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.near_me_controls .near_me_error {
-  flex-basis: 100%;
-  margin: 0;
-  padding: 8px 10px;
-
-  background: #2b1d20;
-  color: #ffb4b4;
-  border: 1px solid #704047;
-  border-radius: 6px;
-
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.fields_page .near_me_distance {
-  display: inline-flex;
-  align-items: center;
-
-  margin: 8px 0;
-  padding: 4px 9px;
-
-  background: #153136;
-  color: #8ce3e7;
-  border: 1px solid #28666c;
-  border-radius: 5px;
-
-  font-size: 11px;
-  font-weight: 700;
-}
-
-@media (max-width: 768px) {
-  .near_me_controls {
-    gap: 8px;
-    margin: 12px 0 16px;
-  }
-
-  .near_me_controls .near_me_button {
-    width: auto;
-    max-width: 100%;
-    min-height: 38px;
-  }
-
-  .near_me_controls .near_me_status {
-    font-size: 10px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .near_me_controls .near_me_button {
-    transition: none;
-  }
+.fields_page .near_me_status,
+.fields_page .near_me_note {
+  color: #64717b;
 }
