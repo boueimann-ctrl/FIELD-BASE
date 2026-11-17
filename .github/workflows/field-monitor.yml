@@ -8,6 +8,11 @@ on:
 
 permissions:
   contents: read
+  issues: write
+
+concurrency:
+  group: field-base-data-monitor
+  cancel-in-progress: false
 
 jobs:
   monitor:
@@ -56,10 +61,15 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
+      - name: Notify changed fields with GitHub Issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/monitor/notify_github.py
+
       - name: Save monitoring snapshots
         if: success()
         uses: actions/cache/save@v4
         with:
           path: frontend/data-monitor/snapshots.json
           key: field-monitor-${{ github.run_id }}
-
