@@ -14,12 +14,18 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import (
+    HTTPRedirectHandler,
+    Request,
+    build_opener,
+)
 from urllib.robotparser import RobotFileParser
+
 
 ROOT = Path(__file__).resolve().parents[2]
 FIELDS_FILE = ROOT / "src/data/fields.ts"
 VERIFICATION_FILE = ROOT / "src/data/fieldVerification.ts"
+
 STATE_DIR = ROOT / "data-monitor"
 SNAPSHOT_FILE = STATE_DIR / "snapshots.json"
 REPORT_FILE = STATE_DIR / "report.md"
@@ -27,39 +33,71 @@ JSON_REPORT_FILE = STATE_DIR / "report.json"
 
 USER_AGENT = "FIELD-BASE-Monitor/1.0 (+public website monitoring)"
 TIMEOUT = 12
-MAX_BYTES = 1_000_000
+MAX_BYTES = 3_000_000
+MAX_ROBOTS_BYTES = 256_000
 REQUEST_DELAY = 2.0
+
 DIRECTORY_URL = "https://sightin.jp/field/map/?area=kanto"
 
-FIELD_PATTERN = re.compile(r"createField\s*\(\s*\{(.*?)\}\s*\)", re.S)
+FIELD_PATTERN = re.compile(
+    r"createField\s*\(\s*\{(.*?)\}\s*\)",
+    re.S,
+)
+
 PROPERTY_PATTERN = re.compile(
-    r"(\w+)\s*:\s*(['\"])(.*?)\2", re.S
+    r"(\w+)\s*:\s*(['\"])(.*?)\2",
+    re.S,
 )
+
 VERIFIED_PATTERN = re.compile(
-    r"['\"]([^'\"]+)['\"]\s*:\s*\{(.*?)\}", re.S
+    r"['\"]([^'\"]+)['\"]\s*:\s*\{(.*?)\}",
+    re.S,
 )
+
+
+class NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(
+        self, request, fp, code, msg, headers, newurl
+    ):
+        return None
+
+
+OPENER = build_opener(NoRedirectHandler)
 
 
 class TextExtractor(HTMLParser):
+    SKIP_TAGS = {"script", "style", "noscript", "svg"}
+    VOID_TAGS = {
+        "area", "base", "br", "col", "embed", "hr",
+        "img", "input", "link", "meta", "param",
+        "source", "track", "wbr",
+    }
+
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.parts = []
-        self.skip_depth = 0
+        self.stack = []
 
     def handle_starttag(self, tag, attrs):
-        if tag in ("script", "style", "noscript", "svg"):
-            self.skip_depth += 1
+        if tag in self.SKIP_TAGS:
+            self.stack.append(tag)
+
+    def handle_startendtag(self, tag, attrs):
+        pass
 
     def handle_endtag(self, tag):
-        if tag in ("script", "style", "noscript", "svg"):
-            self.skip_depth = max(0, self.skip_depth - 1)
+        if tag in self.SKIP_TAGS and tag in self.stack:
+            index = len(self.stack) - 1 - self.stack[::-1].index(tag)
+            self.stack = self.stack[:index]
 
     def handle_data(self, data):
-        if self.skip_depth == 0:
+        if not self.stack:
             self.parts.append(data)
 
     def text(self):
-        return re.sub(r"\s+", " ", " ".join(self.parts)).strip()
+        return re.sub(
+            r"\s+", " ", " ".join(self.parts)
+        ).strip()
 
 
 def parse_properties(block):
@@ -75,6 +113,7 @@ def load_fields():
 
     for match in FIELD_PATTERN.finditer(source):
         props = parse_properties(match.group(1))
+
         if "id" in props and "name" in props:
             fields.append({
                 "id": props["id"],
@@ -82,17 +121,24 @@ def load_fields():
                 "website": props.get("website", ""),
             })
 
-    verified_source = VERIFICATION_FILE.read_text(encoding="utf-8")
+    verified_source = VERIFICATION_FILE.read_text(
+        encoding="utf-8"
+    )
+
     verified_section = verified_source.split(
         "const verifiedFields:", 1
     )[-1].split("export function", 1)[0]
 
     verified = {}
+
     for match in VERIFIED_PATTERN.finditer(verified_section):
-        verified[match.group(1)] = parse_properties(match.group(2))
+        verified[match.group(1)] = parse_properties(
+            match.group(2)
+        )
 
     for field in fields:
         override = verified.get(field["id"], {})
+
         if override.get("website"):
             field["website"] = override["website"]
 
@@ -102,6 +148,7 @@ def load_fields():
 def valid_url(value):
     try:
         parts = urlsplit(value)
+
         return (
             parts.scheme in ("http", "https")
             and bool(parts.hostname)
@@ -112,9 +159,39 @@ def valid_url(value):
         return False
 
 
-def fetch_robots(url, cache):
+def origin_of(url):
     parts = urlsplit(url)
-    origin = f"{parts.scheme}://{parts.netloc}"
+    return f"{parts.scheme}://{parts.netloc}"
+
+
+def redirect_result(exc, original_url):
+    from urllib.parse import urljoin
+
+    location = exc.headers.get("Location")
+
+    if not location:
+        return {
+            "status": "redirect_review",
+            "http_status": exc.code,
+        }
+
+    final_url = urljoin(original_url, location)
+
+    if not valid_url(final_url):
+        return {
+            "status": "invalid_redirect",
+            "final_url": final_url,
+        }
+
+    return {
+        "status": "redirect_review",
+        "http_status": exc.code,
+        "final_url": final_url,
+    }
+
+
+def fetch_robots(url, cache):
+    origin = origin_of(url)
 
     if origin in cache:
         return cache[origin]
@@ -123,17 +200,33 @@ def fetch_robots(url, cache):
     parser = RobotFileParser()
     parser.set_url(robots_url)
 
+    request = Request(
+        robots_url,
+        headers={"User-Agent": USER_AGENT},
+    )
+
     try:
-        request = Request(
-            robots_url,
-            headers={"User-Agent": USER_AGENT},
-        )
-        with urlopen(request, timeout=TIMEOUT) as response:
-            data = response.read(256_000)
-            content = data.decode("utf-8", errors="replace")
+        with OPENER.open(request, timeout=TIMEOUT) as response:
+            data = response.read(MAX_ROBOTS_BYTES + 1)
+
+            if len(data) > MAX_ROBOTS_BYTES:
+                cache[origin] = None
+                return None
+
+            content = data.decode(
+                "utf-8", errors="replace"
+            )
             parser.parse(content.splitlines())
-        cache[origin] = parser
-    except (HTTPError, URLError, TimeoutError, OSError, ValueError):
+            cache[origin] = parser
+
+    except HTTPError as exc:
+        if exc.code in (404, 410):
+            parser.parse([])
+            cache[origin] = parser
+        else:
+            cache[origin] = None
+
+    except (URLError, TimeoutError, OSError, ValueError):
         cache[origin] = None
 
     return cache[origin]
@@ -148,29 +241,19 @@ def check_page(url, robots_cache):
     if not parser.can_fetch(USER_AGENT, url):
         return {"status": "robots_disallowed"}
 
-    try:
-        request = Request(
-            url,
-            headers={
-                "User-Agent": USER_AGENT,
-                "Accept": "text/html",
-            },
-        )
+    request = Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html",
+        },
+    )
 
-        with urlopen(request, timeout=TIMEOUT) as response:
-            final_url = response.geturl()
+    try:
+        with OPENER.open(request, timeout=TIMEOUT) as response:
             content_type = response.headers.get(
                 "Content-Type", ""
             ).lower()
-
-            if not valid_url(final_url):
-                return {"status": "invalid_redirect"}
-
-            if urlsplit(final_url).netloc != urlsplit(url).netloc:
-                return {
-                    "status": "redirect_review",
-                    "final_url": final_url,
-                }
 
             if "text/html" not in content_type:
                 return {"status": "not_html"}
@@ -178,13 +261,24 @@ def check_page(url, robots_cache):
             content = response.read(MAX_BYTES + 1)
 
             if len(content) > MAX_BYTES:
-                return {"status": "too_large"}
+                return {
+                    "status": "too_large",
+                    "max_bytes": MAX_BYTES,
+                }
 
-            charset = response.headers.get_content_charset() or "utf-8"
+            charset = (
+                response.headers.get_content_charset()
+                or "utf-8"
+            )
+
             try:
-                html = content.decode(charset, errors="replace")
+                html = content.decode(
+                    charset, errors="replace"
+                )
             except LookupError:
-                html = content.decode("utf-8", errors="replace")
+                html = content.decode(
+                    "utf-8", errors="replace"
+                )
 
         extractor = TextExtractor()
         extractor.feed(html)
@@ -204,15 +298,20 @@ def check_page(url, robots_cache):
         }
 
     except HTTPError as exc:
+        if exc.code in (301, 302, 303, 307, 308):
+            return redirect_result(exc, url)
+
         return {
             "status": "http_error",
             "http_status": exc.code,
         }
+
     except (URLError, TimeoutError, OSError, ValueError) as exc:
         return {
             "status": "request_error",
             "error_type": type(exc).__name__,
         }
+
     except Exception as exc:
         return {
             "status": "parse_error",
@@ -225,9 +324,13 @@ def load_snapshots():
         return {}
 
     try:
-        data = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
+        data = json.loads(
+            SNAPSHOT_FILE.read_text(encoding="utf-8")
+        )
+
         if isinstance(data, dict):
             return data
+
     except (ValueError, OSError):
         pass
 
@@ -236,7 +339,11 @@ def load_snapshots():
 
 def write_json(path, value):
     path.write_text(
-        json.dumps(value, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(
+            value,
+            ensure_ascii=False,
+            indent=2,
+        ) + "\n",
         encoding="utf-8",
     )
 
@@ -264,8 +371,10 @@ def markdown_report(report):
     for item in report["results"]:
         name = item["name"].replace("|", "\\|")
         url = item["url"].replace("|", "%7C")
-        status = item["status"]
-        lines.append(f"| {name} | {status} | {url} |")
+
+        lines.append(
+            f"| {name} | {item['status']} | {url} |"
+        )
 
     lines.extend([
         "",
@@ -275,10 +384,12 @@ def markdown_report(report):
         "- URLへのアクセス成功は営業中の証明ではありません。",
         "- 取得失敗やアクセス制限は閉業の証明ではありません。",
         "- 監視対象は登録済みの公式URLのみです。",
-        "- サイトのJavaScript生成部分は取得できない場合があります。",
+        "- JavaScript生成部分は取得できない場合があります。",
         "- 施設データは自動変更しません。",
+        "- リダイレクト先は自動取得せず、確認対象とします。",
         "",
     ])
+
     return "\n".join(lines)
 
 
@@ -294,16 +405,19 @@ def main():
     for index, field in enumerate(fields, start=1):
         field_id = field["id"]
         url = field["website"].strip()
-        print(f"[{index}/{len(fields)}] {field['name']}", flush=True)
+
+        print(
+            f"[{index}/{len(fields)}] {field['name']}",
+            flush=True,
+        )
 
         if not url or url == DIRECTORY_URL:
-            result = {
+            results.append({
                 "id": field_id,
                 "name": field["name"],
                 "url": "",
                 "status": "missing_url",
-            }
-            results.append(result)
+            })
             continue
 
         if not valid_url(url):
@@ -320,6 +434,7 @@ def main():
 
         if status == "ok":
             old = previous.get(field_id)
+
             if not isinstance(old, dict):
                 old = {}
 
@@ -352,28 +467,43 @@ def main():
 
         time.sleep(REQUEST_DELAY)
 
-    statuses = [item["status"] for item in results]
-    normal = {"missing_url", "baseline", "unchanged"}
+    statuses = [
+        item["status"]
+        for item in results
+    ]
+
+    normal = {
+        "missing_url",
+        "baseline",
+        "unchanged",
+    }
+
     report = {
-        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "checked_at": datetime.now(
+            timezone.utc
+        ).isoformat(),
         "total_fields": len(fields),
         "monitored": sum(
-            status != "missing_url" for status in statuses
+            status != "missing_url"
+            for status in statuses
         ),
         "missing_url": statuses.count("missing_url"),
         "baseline": statuses.count("baseline"),
         "changed": statuses.count("changed"),
         "unchanged": statuses.count("unchanged"),
         "needs_review": sum(
-            status not in normal for status in statuses
+            status not in normal
+            for status in statuses
         ),
         "results": results,
     }
 
     write_json(SNAPSHOT_FILE, updated)
     write_json(JSON_REPORT_FILE, report)
+
     REPORT_FILE.write_text(
-        markdown_report(report), encoding="utf-8"
+        markdown_report(report),
+        encoding="utf-8",
     )
 
     print("\n=== FIELD//BASE DATA MONITOR ===")

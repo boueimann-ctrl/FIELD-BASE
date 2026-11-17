@@ -1,14 +1,17 @@
 
 import type { Field } from '../types/field'
 
-type VerifiedFieldData = {
-  verifiedAt: string
-  sourceUrl: string
-  website: string
-  address: string
-  rental?: boolean
-  beginnerFriendly?: boolean
-}
+type VerifiedFieldData = Partial<
+  Pick<
+    Field,
+    | 'verifiedAt'
+    | 'sourceUrl'
+    | 'website'
+    | 'address'
+    | 'rental'
+    | 'beginnerFriendly'
+  >
+>
 
 const verifiedFields: Record<
   string,
@@ -27,13 +30,15 @@ const verifiedFields: Record<
   },
 
   'asobiba-shinkiba': {
-    verifiedAt: '2026-11-17',
+    verifiedAt: '2026-11-18',
     sourceUrl:
-      'https://asobiba-tokyo.com/fields',
+      'https://asobiba-tokyo.com/fields/shinkiba',
     website:
-      'https://asobiba-tokyo.com/fields',
+      'https://asobiba-tokyo.com/fields/shinkiba',
     address:
       '東京都江東区新木場1-2-17',
+    rental: true,
+    beginnerFriendly: true,
   },
 
   'bravepoint-daiba': {
@@ -47,6 +52,15 @@ const verifiedFields: Record<
     rental: true,
     beginnerFriendly: true,
   },
+
+  // 公式サイトURLを確認済み。
+  // 住所・料金・営業状況は別途確認する。
+  'desert-union': {
+    website:
+      'https://sites.google.com/view/desert-union/home',
+    sourceUrl:
+      'https://sites.google.com/view/desert-union/home',
+  },
 }
 
 export function attachFieldVerification(
@@ -55,7 +69,9 @@ export function attachFieldVerification(
   return sourceFields.map((field) => {
     const verified = verifiedFields[field.id]
 
-    if (!verified) return field
+    if (!verified) {
+      return field
+    }
 
     return {
       ...field,
