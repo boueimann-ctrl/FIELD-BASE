@@ -17,6 +17,10 @@ import {
 } from '../utils/distance'
 
 import { getGoogleMapsUrl } from '../utils/maps'
+import {
+  matchesFieldSearch,
+  resolveRegionQuery,
+} from '../utils/fieldSearch'
 
 import './FieldsPageNearMe.css'
 import './FieldsPageCards.css'
@@ -102,18 +106,8 @@ function FieldsPage() {
 
   const filteredFields: FieldWithDistance[] = allFields
     .filter((field) => {
-      const searchText = [
-        field.name,
-        field.prefecture,
-        field.city,
-        field.address,
-        field.description,
-      ]
-        .join(' ')
-        .toLowerCase()
-
       return (
-        searchText.includes(appliedKeyword.trim().toLowerCase()) &&
+        matchesFieldSearch(field, appliedKeyword) &&
         (!prefecture || field.prefecture === prefecture) &&
         (!indoorOnly || field.indoor) &&
         (!rentalOnly || field.rental === true)
@@ -439,7 +433,7 @@ function FieldsPage() {
         >
           <FieldMap
             fields={mappedFields}
-            regionQuery={prefecture || appliedKeyword}
+            regionQuery={resolveRegionQuery(prefecture || appliedKeyword)}
           />
         </div>
 
