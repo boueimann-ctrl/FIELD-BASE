@@ -1,12 +1,13 @@
 
 import type { Field } from '../types/field'
+import verifiedLocationData from './generated/verifiedFieldLocations.json'
 
 export type FieldCoordinates = {
   latitude: number
   longitude: number
 }
 
-export const fieldLocations: Record<
+const manuallyVerifiedLocations: Record<
   string,
   FieldCoordinates
 > = {
@@ -27,6 +28,38 @@ export const fieldLocations: Record<
     latitude: 35.79075701160595,
     longitude: 140.1502336098031,
   },
+
+  // yaNex
+  'yanex': {
+    latitude: 36.00587137248421,
+    longitude: 139.8380606758022,
+  },
+}
+
+const importedVerifiedLocations: Record<
+  string,
+  FieldCoordinates
+> = verifiedLocationData
+
+export const fieldLocations: Record<
+  string,
+  FieldCoordinates
+> = {
+  ...importedVerifiedLocations,
+  ...manuallyVerifiedLocations,
+}
+
+function hasValidCoordinates(
+  coordinates: FieldCoordinates
+): boolean {
+  return (
+    Number.isFinite(coordinates.latitude) &&
+    Number.isFinite(coordinates.longitude) &&
+    coordinates.latitude >= -90 &&
+    coordinates.latitude <= 90 &&
+    coordinates.longitude >= -180 &&
+    coordinates.longitude <= 180
+  )
 }
 
 export function attachFieldLocations(
@@ -36,6 +69,10 @@ export function attachFieldLocations(
     const coordinates = fieldLocations[field.id]
 
     if (!coordinates) {
+      return field
+    }
+
+    if (!hasValidCoordinates(coordinates)) {
       return field
     }
 
