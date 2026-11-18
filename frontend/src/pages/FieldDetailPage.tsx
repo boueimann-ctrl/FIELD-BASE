@@ -1,3 +1,4 @@
+
 import { Link, useParams } from 'react-router-dom'
 
 import { fields } from '../data/fields'
@@ -20,6 +21,22 @@ const allFields = attachFieldLocations(
   attachFieldVerification(fields)
 )
 
+const DIRECTORY_SOURCE =
+  'https://sightin.jp/field/map/?area=kanto'
+
+function isValidWebUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+
+    return (
+      url.protocol === 'https:' ||
+      url.protocol === 'http:'
+    )
+  } catch {
+    return false
+  }
+}
+
 function FieldDetailPage() {
   const { id } = useParams<{ id: string }>()
 
@@ -41,14 +58,37 @@ function FieldDetailPage() {
     )
   }
 
-  const hasWebsite = /^https?:\/\//i.test(field.website)
+  const hasWebsite = isValidWebUrl(field.website)
 
   const hasDetailedAddress =
     field.address.trim() !== '' &&
-    !field.address.includes('詳細住所未確認')
+    !field.address.includes('未確認')
+
+  const hasCoordinates =
+    typeof field.latitude === 'number' &&
+    typeof field.longitude === 'number' &&
+    Number.isFinite(field.latitude) &&
+    Number.isFinite(field.longitude) &&
+    Math.abs(field.latitude) <= 90 &&
+    Math.abs(field.longitude) <= 180
+
+  const canShowDirections =
+    hasDetailedAddress || hasCoordinates
+
+  const hasVerificationDate =
+    typeof field.verifiedAt === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(field.verifiedAt)
+
+  const hasSourceUrl =
+    isValidWebUrl(field.sourceUrl) &&
+    field.sourceUrl !== DIRECTORY_SOURCE
 
   const correctionUrl =
     `/contact?type=correction&field=${encodeURIComponent(field.name)}`
+
+  const addressLabel = hasDetailedAddress
+    ? field.address
+    : `${field.prefecture}${field.city}（詳細住所未確認）`
 
   return (
     <div className="field_detail_page">
@@ -104,19 +144,31 @@ function FieldDetailPage() {
               <dl className="field_detail_info">
                 <div>
                   <dt>所在地</dt>
-                  <dd>{field.address}</dd>
+                  <dd>{addressLabel}</dd>
                 </div>
 
                 <div>
                   <dt>フィールドタイプ</dt>
-                  <dd>{field.indoor ? '屋内' : '屋外'}</dd>
+                  <dd>
+                    {field.indoor ? '屋内' : '屋外'}
+                  </dd>
                 </div>
 
                 <div>
                   <dt>料金</dt>
-                  <dd>
+                  <dd
+                    style={
+                      field.price === null
+                        ? {
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            color: '#64717b',
+                          }
+                        : undefined
+                    }
+                  >
                     {field.price === null
-                      ? '未確認'
+                      ? '料金未確認'
                       : `¥${field.price.toLocaleString()}〜`}
                   </dd>
                 </div>
@@ -157,31 +209,42 @@ function FieldDetailPage() {
               <h2>アクセス・経路案内</h2>
 
               <p className="field_detail_address">
-                {field.address}
+                {addressLabel}
               </p>
 
-              <a
-                href={getGoogleMapsDirectionsUrl(field)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="field_detail_button primary"
-              >
-                経路を調べる ↗
-              </a>
+              {canShowDirections ? (
+                <>
+                  <a
+                    href={getGoogleMapsDirectionsUrl(field)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="field_detail_button primary"
+                  >
+                    経路を調べる ↗
+                  </a>
 
-              <a
-                href={getGoogleMapsUrl(field)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="field_detail_button secondary"
-              >
-                Googleマップで確認 ↗
-              </a>
+                  <a
+                    href={getGoogleMapsUrl(field)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="field_detail_button secondary"
+                  >
+                    Googleマップで確認 ↗
+                  </a>
+                </>
+              ) : (
+                <p className="field_detail_muted">
+                  正確な経路を案内するための
+                  位置情報を準備中です。
+                </p>
+              )}
 
               {!hasDetailedAddress && (
                 <p className="field_detail_notice">
                   詳細住所は未確認です。
-                  地図の検索結果を確認してください。
+                  {hasCoordinates
+                    ? ' 地図上の位置は参考情報です。訪問前に施設の所在地をご確認ください。'
+                    : ' 正確な所在地が確認できるまで、経路案内を表示していません。'}
                 </p>
               )}
             </section>
@@ -210,12 +273,15 @@ function FieldDetailPage() {
 
               <div className="field_detail_verification">
                 <span>情報確認日</span>
+
                 <strong>
-                  {field.verifiedAt ?? '未確認'}
+                  {hasVerificationDate
+                    ? field.verifiedAt
+                    : '情報確認前'}
                 </strong>
               </div>
 
-              {field.sourceUrl && (
+              {hasSourceUrl && (
                 <a
                   href={field.sourceUrl}
                   target="_blank"
@@ -226,9 +292,16 @@ function FieldDetailPage() {
                 </a>
               )}
 
+              {!hasVerificationDate && (
+                <p className="field_detail_notice">
+                  このフィールドの掲載情報は、
+                  個別の確認日が登録されていません。
+                </p>
+              )}
+
               <p className="field_detail_notice">
                 掲載情報は変更される場合があります。
-                営業日・料金・予約条件は訪問前に
+                営業状況・料金・予約条件は訪問前に
                 施設へご確認ください。
               </p>
 
@@ -243,15 +316,17 @@ function FieldDetailPage() {
         </div>
       </main>
 
-      <div className="field_detail_mobile_action">
-        <a
-          href={getGoogleMapsDirectionsUrl(field)}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          経路案内を開く ↗
-        </a>
-      </div>
+      {canShowDirections && (
+        <div className="field_detail_mobile_action">
+          <a
+            href={getGoogleMapsDirectionsUrl(field)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            経路案内を開く ↗
+          </a>
+        </div>
+      )}
     </div>
   )
 }
