@@ -1,0 +1,428 @@
+{
+  "checked_at": "2026-11-17T19:31:38.136558+00:00",
+  "total_fields": 68,
+  "monitored": 8,
+  "missing_url": 60,
+  "baseline": 1,
+  "changed": 0,
+  "unchanged": 7,
+  "needs_review": 0,
+  "results": [
+    {
+      "id": "blkfox-fussa",
+      "name": "BLKFOX 福生店",
+      "url": "https://blkfox.jp/",
+      "status": "unchanged",
+      "text_length": 3536
+    },
+    {
+      "id": "asobiba-ikebukuro",
+      "name": "ASOBIBA 池袋店",
+      "url": "https://asobiba-tokyo.com/fields/ikebukuro",
+      "status": "unchanged",
+      "text_length": 1295
+    },
+    {
+      "id": "asobiba-shinkiba",
+      "name": "ASOBIBA 新木場店",
+      "url": "https://asobiba-tokyo.com/fields/shinkiba",
+      "status": "unchanged",
+      "text_length": 1363
+    },
+    {
+      "id": "bravepoint-daiba",
+      "name": "Brave Point 台場店",
+      "url": "https://odaiba.brave-point.jp/",
+      "status": "unchanged",
+      "text_length": 2805
+    },
+    {
+      "id": "tenkoo",
+      "name": "TENKOO",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "ops",
+      "name": "OPS",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "volcano",
+      "name": "Volcano",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "ibf9",
+      "name": "IBF9",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "ramram",
+      "name": "ラムラム",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "blkfox-atsugi",
+      "name": "BLKFOX 本厚木店",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "minna-no-mori",
+      "name": "みんなの森",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "area41",
+      "name": "AREA41 YOKOHAMA",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "attacker",
+      "name": "ATTACKER",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "phantom-avenue",
+      "name": "PHANTOM AVENUE",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "garden-z",
+      "name": "ガーデンZ",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "shonan-tosca",
+      "name": "湘南トスカフィールド",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "tokyo-sabage-park",
+      "name": "東京サバゲパーク",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "union-base",
+      "name": "UNION BASE",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "desert-union",
+      "name": "デザートユニオン",
+      "url": "https://sites.google.com/view/desert-union/home",
+      "status": "unchanged",
+      "text_length": 976
+    },
+    {
+      "id": "forest-union",
+      "name": "フォレストユニオン",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "met-union",
+      "name": "METユニオン",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "union-stadium",
+      "name": "UNION STADIUM",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "headshot",
+      "name": "HEADSHOT",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "little-headshot",
+      "name": "リトルヘッドショット",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "no9",
+      "name": "NO.9",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "savas",
+      "name": "SAVAS",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "cimax",
+      "name": "CIMAX",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "beam",
+      "name": "BEAM",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "war-zone",
+      "name": "WAR ZONE Semper Fi",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "yanex",
+      "name": "yaNex",
+      "url": "https://www.yanex.co/",
+      "status": "unchanged",
+      "text_length": 2435
+    },
+    {
+      "id": "battle",
+      "name": "BATTLE",
+      "url": "https://www.battle-airsoft.com/",
+      "status": "unchanged",
+      "text_length": 1621
+    },
+    {
+      "id": "bb-jungle",
+      "name": "BB-JUNGLE",
+      "url": "https://pintail.wixsite.com/bbjungle",
+      "status": "baseline",
+      "text_length": 1406
+    },
+    {
+      "id": "seals",
+      "name": "SEALs",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "athena",
+      "name": "ATHENA",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "geronimo",
+      "name": "GERONIMO",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "camp-devgru",
+      "name": "CAMP DEVGRU",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "battle-city",
+      "name": "バトルシティー",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "paradox",
+      "name": "PARADOX",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "sabage-paradise",
+      "name": "サバゲーパラダイス",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "queen",
+      "name": "Queen",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "rockhill",
+      "name": "RockHill",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "whitebase",
+      "name": "ホワイトベース",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "xx",
+      "name": "XX（ダブルクロス）",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "operation-freedom",
+      "name": "オペレーションフリーダム",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "sister",
+      "name": "SISTER",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "heads-kawagoe",
+      "name": "H.E.A.D.S 川越",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "oasis",
+      "name": "Oasis",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "assault2",
+      "name": "アサルト2",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "assault3",
+      "name": "アサルト3",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "foxtrot",
+      "name": "FOXTROT",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "hq-reload",
+      "name": "HQリロード",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "t-mout",
+      "name": "T-MOUT",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "kis-isf",
+      "name": "KIS-ISF",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "hills",
+      "name": "Hill's",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "tsukuba-sabage-land",
+      "name": "つくばサバゲーランド",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "survival-country",
+      "name": "サバイバルカントリー",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "edge",
+      "name": "EDGE",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "c-a-t",
+      "name": "C.A.T.Facility",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "omisa",
+      "name": "小美鯖",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "rise-secret-camp",
+      "name": "Rise.Secret.Camp",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "f2plant",
+      "name": "F2プラント",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "beforester",
+      "name": "Beforester",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "head-ax",
+      "name": "HEAD AX",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "sabage-park-nasu",
+      "name": "サバゲパーク那須",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "akagi357",
+      "name": "AKAGI357",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "dragon-one",
+      "name": "DRAGON-ONE",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "comrade-hills",
+      "name": "COMRADE HILLS",
+      "url": "",
+      "status": "missing_url"
+    },
+    {
+      "id": "gunfield-haruna",
+      "name": "GUNFIELD HARUNA",
+      "url": "",
+      "status": "missing_url"
+    }
+  ]
+}

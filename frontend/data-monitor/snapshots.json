@@ -1,0 +1,42 @@
+{
+  "blkfox-fussa": {
+    "url": "https://blkfox.jp/",
+    "hash": "4327b86fdd7ba7ef6c5aff874ffb1cc69e0900ee95e3d166aa92e8410d7f0e7f",
+    "checked_at": "2026-11-17T19:31:17.004384+00:00"
+  },
+  "asobiba-ikebukuro": {
+    "url": "https://asobiba-tokyo.com/fields/ikebukuro",
+    "hash": "a5db6167f22a888a6f164f6b6b84fc61350403ba9ba235140d04463f1fef8ede",
+    "checked_at": "2026-11-17T19:31:19.305912+00:00"
+  },
+  "asobiba-shinkiba": {
+    "url": "https://asobiba-tokyo.com/fields/shinkiba",
+    "hash": "ac0453230396b7a45d642896315067d06cb9cae41498b0a17c844c252de34a01",
+    "checked_at": "2026-11-17T19:31:21.424250+00:00"
+  },
+  "bravepoint-daiba": {
+    "url": "https://odaiba.brave-point.jp/",
+    "hash": "2d473c8eb32b5c40b01e9757d38f7b08ff8e11df9c4859e132c0d77780332c80",
+    "checked_at": "2026-11-17T19:31:23.817562+00:00"
+  },
+  "yanex": {
+    "url": "https://www.yanex.co/",
+    "hash": "e820dd0707fb28894f237c37c44bd1a1f22ca3adf1e6f0d5460e4bbd3105aca4",
+    "checked_at": "2026-11-17T19:31:30.335071+00:00"
+  },
+  "battle": {
+    "url": "https://www.battle-airsoft.com/",
+    "hash": "e6aa25fb9286b410efaa672247c9353843c829b4ae199aa3c59f18cdcfec2322",
+    "checked_at": "2026-11-17T19:31:33.548798+00:00"
+  },
+  "desert-union": {
+    "url": "https://sites.google.com/view/desert-union/home",
+    "hash": "26233548515245035f402c518913dbc050ebe11491bd216924b0f0310dc7c865",
+    "checked_at": "2026-11-17T19:31:26.801155+00:00"
+  },
+  "bb-jungle": {
+    "url": "https://pintail.wixsite.com/bbjungle",
+    "hash": "83afb5911ea8b4cc04007c2da274e07297ea76dca5efccf8ebff8c1b1f97c27d",
+    "checked_at": "2026-11-17T19:31:36.131139+00:00"
+  }
+}
