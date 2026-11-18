@@ -45,6 +45,21 @@
   z-index: 0;
 }
 
+.field_map_loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 360px;
+  padding: 24px;
+  background: #f7f7f7;
+  border: 1px solid #e5e5e5;
+  color: #666;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
 .field_map_popup {
   min-width: 160px;
 }
@@ -101,8 +116,9 @@
 
 @media (max-width: 768px) {
   .field_map_header {
-    align-items: start;
+    align-items: flex-start;
     flex-direction: column;
+    gap: 10px;
   }
 
   .field_map {
@@ -111,5 +127,9 @@
 
   .field_map_section {
     margin: 40px 0;
+  }
+
+  .field_map_loading {
+    min-height: 300px;
   }
 }

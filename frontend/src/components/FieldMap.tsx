@@ -1,160 +1,81 @@
 
-import { useEffect } from 'react'
 import {
-  MapContainer,
-  Marker,
-  Popup,
-  TileLayer,
-  useMap,
-} from 'react-leaflet'
-import { Link } from 'react-router-dom'
-import L from 'leaflet'
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+
 import type { Field } from '../types/field'
-import 'leaflet/dist/leaflet.css'
+
 import './FieldMap.css'
+
+const FieldMapCanvas = lazy(
+  () => import('./FieldMapCanvas')
+)
 
 type FieldMapProps = {
   fields: Field[]
 }
 
-const markerIcon = L.icon({
-  iconUrl:
-    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl:
-    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl:
-    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-})
-
-type MappableField = Field & {
-  latitude: number
-  longitude: number
-}
-
-function hasCoordinates(field: Field): field is MappableField {
-  return (
-    typeof field.latitude === 'number' &&
-    typeof field.longitude === 'number' &&
-    Number.isFinite(field.latitude) &&
-    Number.isFinite(field.longitude) &&
-    field.latitude >= -90 &&
-    field.latitude <= 90 &&
-    field.longitude >= -180 &&
-    field.longitude <= 180
+function FieldMap({ fields }: FieldMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [shouldLoad, setShouldLoad] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      !('IntersectionObserver' in window)
   )
-}
-
-function FitMarkers({ fields }: { fields: MappableField[] }) {
-  const map = useMap()
 
   useEffect(() => {
-    if (fields.length === 0) {
-      map.setView([35.7, 139.6], 9)
-      return
-    }
+    if (shouldLoad) return
 
-    if (fields.length === 1) {
-      map.setView(
-        [fields[0].latitude, fields[0].longitude],
-        13
-      )
-      return
-    }
+    const element = containerRef.current
 
-    const bounds = L.latLngBounds(
-      fields.map((field) => [
-        field.latitude,
-        field.longitude,
-      ])
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoad(true)
+          observer.disconnect()
+        }
+      },
+      {
+        rootMargin: '150px 0px',
+        threshold: 0,
+      }
     )
 
-    map.fitBounds(bounds, {
-      padding: [35, 35],
-      maxZoom: 13,
-    })
-  }, [fields, map])
+    observer.observe(element)
 
-  return null
-}
-
-function FieldMap({ fields }: FieldMapProps) {
-  const mappedFields = fields.filter(hasCoordinates)
+    return () => observer.disconnect()
+  }, [shouldLoad])
 
   return (
-    <section className="field_map_section">
-      <div className="field_map_header">
-        <div>
-          <p className="field_map_eyebrow">
-            EXPLORE THE MAP
-          </p>
-          <h2>FIELD MAP.</h2>
-        </div>
-
-        <span className="field_map_count">
-          {mappedFields.length} LOCATIONS
-        </span>
-      </div>
-
-      <div className="field_map_wrapper">
-        <MapContainer
-          center={[35.7, 139.6]}
-          zoom={9}
-          scrollWheelZoom={false}
-          className="field_map"
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-
-          <FitMarkers fields={mappedFields} />
-
-          {mappedFields.map((field) => (
-            <Marker
-              key={field.id}
-              position={[
-                field.latitude,
-                field.longitude,
-              ]}
-              icon={markerIcon}
+    <div ref={containerRef}>
+      {shouldLoad ? (
+        <Suspense
+          fallback={
+            <div
+              className="field_map_loading"
+              role="status"
             >
-              <Popup>
-                <div className="field_map_popup">
-                  <strong>{field.name}</strong>
-
-                  <p>
-                    {field.prefecture} / {field.city}
-                  </p>
-
-                  <Link to={`/fields/${field.id}`}>
-                    VIEW DETAILS →
-                  </Link>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
-
-        {mappedFields.length === 0 && (
-          <div className="field_map_empty">
-            <strong>位置情報を準備中</strong>
-            <p>
-              この検索条件では、座標登録済みの
-              フィールドがありません。
-            </p>
-          </div>
-        )}
-      </div>
-
-      <p className="field_map_note">
-        座標を確認できたフィールドのみ表示しています。
-        地図上の位置と実際の入口は異なる場合があります。
-      </p>
-    </section>
+              地図を読み込んでいます...
+            </div>
+          }
+        >
+          <FieldMapCanvas fields={fields} />
+        </Suspense>
+      ) : (
+        <div
+          className="field_map_loading"
+          role="status"
+        >
+          地図を準備中...
+        </div>
+      )}
+    </div>
   )
 }
 
