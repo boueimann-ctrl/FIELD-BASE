@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom'
 import L from 'leaflet'
 
 import type { Field } from '../types/field'
+import { getPrefectureBounds } from '../utils/prefectureBounds'
 
 import 'leaflet/dist/leaflet.css'
 import './FieldMap.css'
@@ -24,6 +25,9 @@ type MappableField = Field & {
   latitude: number
   longitude: number
 }
+
+const DEFAULT_CENTER: L.LatLngTuple = [36.2, 138.2]
+const DEFAULT_ZOOM = 6
 
 const markerIcon = L.icon({
   iconUrl:
@@ -51,57 +55,65 @@ function hasCoordinates(
   )
 }
 
-function getRegionBounds(
-  query: string
-): L.LatLngBounds | null {
-  if (query.includes('神奈川')) {
-    // 神奈川県のおおよその範囲
-    // 行政境界の正確なデータではない
-    return L.latLngBounds(
-      [35.12, 138.90],
-      [35.69, 139.85]
-    )
-  }
-
-  return null
-}
-
+/**
+ * 検索地域と登録フィールドから表示範囲を決定。
+ *
+ * 優先順位:
+ * 1. 都道府県の概算範囲
+ * 2. 複数フィールドの座標範囲
+ * 3. 単一フィールドの周辺
+ * 4. 日本全体
+ */
 function applyMapView(
   map: L.Map,
   fields: MappableField[],
   regionQuery: string
-) {
-  const region = getRegionBounds(regionQuery)
+): void {
+  const region = getPrefectureBounds(regionQuery)
 
   if (region) {
-    map.fitBounds(region, {
-      padding: [20, 20],
+    const [south, west, north, east] = region
+
+    const bounds = L.latLngBounds(
+      [south, west],
+      [north, east]
+    )
+
+    map.fitBounds(bounds, {
+      padding: [24, 24],
       animate: false,
     })
+
     return
   }
 
   if (fields.length === 0) {
-    map.setView([36.2, 138.2], 6, {
+    map.setView(DEFAULT_CENTER, DEFAULT_ZOOM, {
       animate: false,
     })
+
     return
   }
 
   if (fields.length === 1) {
+    const field = fields[0]
+
     map.setView(
-      [fields[0].latitude, fields[0].longitude],
+      [field.latitude, field.longitude],
       10,
       { animate: false }
     )
+
     return
   }
 
   const bounds = L.latLngBounds(
-    fields.map((field) => [
-      field.latitude,
-      field.longitude,
-    ])
+    fields.map(
+      (field): L.LatLngTuple => [
+        field.latitude,
+        field.longitude,
+      ]
+    )
   )
 
   map.fitBounds(bounds, {
@@ -111,6 +123,10 @@ function applyMapView(
   })
 }
 
+/**
+ * 検索条件が変わったときだけ地図を調整。
+ * 通常の再レンダリングではズームを維持する。
+ */
 function FitMarkers({
   fields,
   regionQuery,
@@ -129,15 +145,19 @@ function FitMarkers({
 
   useEffect(() => {
     map.invalidateSize()
+
     applyMapView(map, fields, regionQuery)
 
-    // 座標と検索地域が変わった場合だけ表示範囲を更新
+    // 座標の変化は signature で検知
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, signature, regionQuery])
 
   return null
 }
 
+/**
+ * 手動で移動・ズームした地図を検索結果の範囲に戻す。
+ */
 function ResetMapView({
   fields,
   regionQuery,
@@ -149,6 +169,7 @@ function ResetMapView({
 
   const reset = () => {
     map.invalidateSize()
+
     applyMapView(map, fields, regionQuery)
   }
 
@@ -173,6 +194,12 @@ function FieldMapCanvas({
     [fields]
   )
 
+  const regionBounds = getPrefectureBounds(regionQuery)
+
+  const regionLabel = regionBounds
+    ? `${regionQuery}の地域全体を表示`
+    : '登録済みフィールドの位置を表示'
+
   return (
     <section className="field_map_section">
       <div className="field_map_header">
@@ -180,6 +207,7 @@ function FieldMapCanvas({
           <p className="field_map_eyebrow">
             EXPLORE THE MAP
           </p>
+
           <h2>FIELD MAP.</h2>
         </div>
 
@@ -190,8 +218,8 @@ function FieldMapCanvas({
 
       <div className="field_map_wrapper">
         <MapContainer
-          center={[36.2, 138.2]}
-          zoom={6}
+          center={DEFAULT_CENTER}
+          zoom={DEFAULT_ZOOM}
           scrollWheelZoom={false}
           className="field_map"
         >
@@ -241,6 +269,7 @@ function FieldMapCanvas({
         {mappedFields.length === 0 && (
           <div className="field_map_empty">
             <strong>位置情報を準備中</strong>
+
             <p>
               この検索条件では、座標登録済みの
               フィールドがありません。
@@ -250,6 +279,7 @@ function FieldMapCanvas({
       </div>
 
       <p className="field_map_note">
+        {regionLabel}。
         座標を確認できたフィールドのみ表示しています。
         地図上の位置と実際の入口は異なる場合があります。
       </p>
