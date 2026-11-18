@@ -17,6 +17,7 @@ import './FieldMap.css'
 
 type FieldMapProps = {
   fields: Field[]
+  regionQuery?: string
 }
 
 type MappableField = Field & {
@@ -50,62 +51,127 @@ function hasCoordinates(
   )
 }
 
-function FitMarkers({
-  fields,
-  signature,
-}: {
-  fields: MappableField[]
-  signature: string
-}) {
-  const map = useMap()
-
-  useEffect(() => {
-    map.invalidateSize()
-
-    if (fields.length === 0) {
-      map.setView([35.7, 139.6], 9)
-      return
-    }
-
-    if (fields.length === 1) {
-      map.setView(
-        [fields[0].latitude, fields[0].longitude],
-        13
-      )
-      return
-    }
-
-    const bounds = L.latLngBounds(
-      fields.map((field) => [
-        field.latitude,
-        field.longitude,
-      ])
+function getRegionBounds(
+  query: string
+): L.LatLngBounds | null {
+  if (query.includes('神奈川')) {
+    // 神奈川県のおおよその範囲
+    // 行政境界の正確なデータではない
+    return L.latLngBounds(
+      [35.12, 138.90],
+      [35.69, 139.85]
     )
-
-    map.fitBounds(bounds, {
-      padding: [35, 35],
-      maxZoom: 13,
-      animate: false,
-    })
-    // signatureが変わったときだけ再計算する
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature, map])
+  }
 
   return null
 }
 
-function FieldMapCanvas({ fields }: FieldMapProps) {
-  const mappedFields = useMemo(
-    () => fields.filter(hasCoordinates),
-    [fields]
+function applyMapView(
+  map: L.Map,
+  fields: MappableField[],
+  regionQuery: string
+) {
+  const region = getRegionBounds(regionQuery)
+
+  if (region) {
+    map.fitBounds(region, {
+      padding: [20, 20],
+      animate: false,
+    })
+    return
+  }
+
+  if (fields.length === 0) {
+    map.setView([36.2, 138.2], 6, {
+      animate: false,
+    })
+    return
+  }
+
+  if (fields.length === 1) {
+    map.setView(
+      [fields[0].latitude, fields[0].longitude],
+      10,
+      { animate: false }
+    )
+    return
+  }
+
+  const bounds = L.latLngBounds(
+    fields.map((field) => [
+      field.latitude,
+      field.longitude,
+    ])
   )
 
-  const signature = mappedFields
+  map.fitBounds(bounds, {
+    padding: [35, 35],
+    maxZoom: 12,
+    animate: false,
+  })
+}
+
+function FitMarkers({
+  fields,
+  regionQuery,
+}: {
+  fields: MappableField[]
+  regionQuery: string
+}) {
+  const map = useMap()
+
+  const signature = fields
     .map(
       (field) =>
         `${field.id}:${field.latitude}:${field.longitude}`
     )
     .join('|')
+
+  useEffect(() => {
+    map.invalidateSize()
+    applyMapView(map, fields, regionQuery)
+
+    // 座標と検索地域が変わった場合だけ表示範囲を更新
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, signature, regionQuery])
+
+  return null
+}
+
+function ResetMapView({
+  fields,
+  regionQuery,
+}: {
+  fields: MappableField[]
+  regionQuery: string
+}) {
+  const map = useMap()
+
+  const reset = () => {
+    map.invalidateSize()
+    applyMapView(map, fields, regionQuery)
+  }
+
+  return (
+    <button
+      type="button"
+      className="field_map_reset"
+      onClick={reset}
+      aria-label="地図の表示範囲を戻す"
+    >
+      表示範囲を戻す
+    </button>
+  )
+}
+
+function FieldMapCanvas({
+  fields,
+  regionQuery = '',
+}: FieldMapProps) {
+  const mappedFields = useMemo(
+    () => fields.filter(hasCoordinates),
+    [fields]
+  )
 
   return (
     <section className="field_map_section">
@@ -124,8 +190,8 @@ function FieldMapCanvas({ fields }: FieldMapProps) {
 
       <div className="field_map_wrapper">
         <MapContainer
-          center={[35.7, 139.6]}
-          zoom={9}
+          center={[36.2, 138.2]}
+          zoom={6}
           scrollWheelZoom={false}
           className="field_map"
         >
@@ -138,7 +204,12 @@ function FieldMapCanvas({ fields }: FieldMapProps) {
 
           <FitMarkers
             fields={mappedFields}
-            signature={signature}
+            regionQuery={regionQuery}
+          />
+
+          <ResetMapView
+            fields={mappedFields}
+            regionQuery={regionQuery}
           />
 
           {mappedFields.map((field) => (

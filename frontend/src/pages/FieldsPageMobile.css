@@ -1,9 +1,5 @@
-/* ========================================
-   FIELD//BASE
-   Mobile List / Map Switch
-======================================== */
 
-/* PCでは従来どおり地図と一覧を両方表示 */
+/* FIELD//BASE - Mobile List / Map Switch */
 
 .fields_mobile_view_switch {
   display: none;
@@ -13,8 +9,6 @@
 .fields_list_area {
   min-width: 0;
 }
-
-/* スマホ・タブレット */
 
 @media (max-width: 768px) {
   .fields_page .fields_mobile_view_switch {
@@ -56,7 +50,6 @@
     outline-offset: 2px;
   }
 
-  /* 非選択側を非表示 */
   .fields_page .fields_map_area,
   .fields_page .fields_list_area {
     display: none;
@@ -67,7 +60,6 @@
     display: block;
   }
 
-  /* 地図モードをスマホ向けの高さに調整 */
   .fields_page .fields_map_area .field_map_wrapper,
   .fields_page .fields_map_area .field_map {
     height: min(55vh, 500px);
@@ -88,5 +80,63 @@
   .fields_page .fields_map_area .field_map {
     height: 48vh;
     min-height: 300px;
+  }
+}
+
+/* 検索ボタン */
+
+.fields_search_button {
+  min-height: 48px;
+  padding: 12px 24px;
+  background: #111;
+  border: 1px solid #111;
+  color: #fff;
+  font-weight: 700;
+}
+
+.fields_search_button:hover {
+  background: #333;
+}
+
+/* 検索結果の通知 */
+
+.fields_search_feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+
+  padding: 16px 18px;
+  margin: 20px 0 12px;
+
+  background: #f4f4f4;
+  border-left: 3px solid #111;
+  scroll-margin-top: 16px;
+}
+
+.fields_search_feedback strong {
+  font-size: 14px;
+}
+
+.fields_search_feedback span {
+  font-size: 13px;
+  color: #444;
+}
+
+@media (max-width: 768px) {
+  .fields_search_button {
+    width: 100%;
+  }
+
+  .fields_search_feedback {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* iPhoneの入力時の自動ズームを抑える */
+  .fields_filters > input,
+  .fields_filters select {
+    font-size: 16px;
   }
 }

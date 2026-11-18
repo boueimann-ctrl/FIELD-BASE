@@ -17,10 +17,15 @@ const FieldMapCanvas = lazy(
 
 type FieldMapProps = {
   fields: Field[]
+  regionQuery?: string
 }
 
-function FieldMap({ fields }: FieldMapProps) {
+function FieldMap({
+  fields,
+  regionQuery = '',
+}: FieldMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+
   const [shouldLoad, setShouldLoad] = useState(
     () =>
       typeof window !== 'undefined' &&
@@ -65,7 +70,10 @@ function FieldMap({ fields }: FieldMapProps) {
             </div>
           }
         >
-          <FieldMapCanvas fields={fields} />
+          <FieldMapCanvas
+            fields={fields}
+            regionQuery={regionQuery}
+          />
         </Suspense>
       ) : (
         <div

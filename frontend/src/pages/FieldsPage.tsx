@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { fields } from '../data/fields'
@@ -40,8 +40,10 @@ function FieldsPage() {
   const viewMode =
     searchParams.get('view') === 'map' ? 'map' : 'list'
 
-  // 日本語入力中はURLを更新せずReactのstateで管理
   const [keyword, setKeyword] = useState(urlKeyword)
+  const [appliedKeyword, setAppliedKeyword] = useState(urlKeyword)
+  const [searchMessage, setSearchMessage] = useState('')
+  const resultsRef = useRef<HTMLDivElement>(null)
 
   const [prefecture, setPrefecture] = useState('')
   const [indoorOnly, setIndoorOnly] = useState(false)
@@ -57,8 +59,8 @@ function FieldsPage() {
   const updateViewMode = (mode: 'list' | 'map') => {
     const nextParams = new URLSearchParams(searchParams)
 
-    if (keyword.trim()) {
-      nextParams.set('q', keyword.trim())
+    if (appliedKeyword.trim()) {
+      nextParams.set('q', appliedKeyword.trim())
     } else {
       nextParams.delete('q')
     }
@@ -111,7 +113,7 @@ function FieldsPage() {
         .toLowerCase()
 
       return (
-        searchText.includes(keyword.trim().toLowerCase()) &&
+        searchText.includes(appliedKeyword.trim().toLowerCase()) &&
         (!prefecture || field.prefecture === prefecture) &&
         (!indoorOnly || field.indoor) &&
         (!rentalOnly || field.rental === true)
@@ -206,8 +208,46 @@ function FieldsPage() {
     )
   }
 
+  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const query = keyword.trim()
+
+    setAppliedKeyword(query)
+
+    setSearchMessage(
+      query
+        ? `「${query}」を検索しました`
+        : 'すべてのフィールドを表示しています'
+    )
+
+    const nextParams = new URLSearchParams(searchParams)
+
+    if (query) {
+      nextParams.set('q', query)
+    } else {
+      nextParams.delete('q')
+    }
+
+    setSearchParams(nextParams, { replace: true })
+
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+
+    window.requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
+  }
+
   const resetFilters = () => {
     setKeyword('')
+    setAppliedKeyword('')
+    setSearchMessage('')
+    setSearchParams({}, { replace: true })
     setPrefecture('')
     setIndoorOnly(false)
     setRentalOnly(false)
@@ -244,7 +284,11 @@ function FieldsPage() {
           条件を指定して、あなたに合ったフィールドを探そう。
         </p>
 
-        <div className="fields_filters">
+        <form
+          className="fields_filters"
+          onSubmit={submitSearch}
+          role="search"
+        >
           <input
             type="search"
             aria-label="フィールドを検索"
@@ -271,6 +315,13 @@ function FieldsPage() {
             ))}
           </select>
 
+          <button
+            type="submit"
+            className="fields_search_button"
+          >
+            検索
+          </button>
+
           <label>
             <input
               type="checkbox"
@@ -292,7 +343,7 @@ function FieldsPage() {
             />
             レンタルあり
           </label>
-        </div>
+        </form>
 
         <div className="near_me_controls">
           <button
@@ -361,6 +412,20 @@ function FieldsPage() {
           </button>
         </div>
 
+        <div
+          className="fields_search_feedback"
+          ref={resultsRef}
+          role="status"
+          aria-live="polite"
+        >
+          <strong>
+            {searchMessage || '検索結果'}
+          </strong>
+          <span>
+            {filteredFields.length}件のフィールドが見つかりました
+          </span>
+        </div>
+
         <p className="fields_count">
           {filteredFields.length} FIELDS FOUND
         </p>
@@ -372,7 +437,10 @@ function FieldsPage() {
               : 'fields_map_area'
           }
         >
-          <FieldMap fields={mappedFields} />
+          <FieldMap
+            fields={mappedFields}
+            regionQuery={prefecture || appliedKeyword}
+          />
         </div>
 
         <div
