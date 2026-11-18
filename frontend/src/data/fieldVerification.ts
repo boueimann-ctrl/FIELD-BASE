@@ -14,6 +14,24 @@ type VerifiedFieldData = Partial<
 >
 
 const verifiedFields: Record<string, VerifiedFieldData> = {
+  'blkfox-fussa': {
+    verifiedAt: '2026-11-19',
+    sourceUrl: 'https://blkfox.jp/fussa/',
+    website: 'https://blkfox.jp/fussa/',
+    address: '東京都福生市福生768 マルフジビルB1',
+    rental: true,
+    beginnerFriendly: true,
+  },
+
+  'blkfox-atsugi': {
+    verifiedAt: '2026-11-19',
+    sourceUrl: 'https://blkfox.jp/honatsugi/',
+    website: 'https://blkfox.jp/honatsugi/',
+    address: '神奈川県厚木市中町2-4-13 本厚木駅前ビル4F',
+    rental: true,
+    beginnerFriendly: true,
+  },
+
   'asobiba-ikebukuro': {
     verifiedAt: '2026-11-17',
     sourceUrl: 'https://asobiba-tokyo.com/fields/ikebukuro',
