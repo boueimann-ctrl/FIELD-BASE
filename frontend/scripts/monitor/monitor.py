@@ -563,27 +563,35 @@ def main():
             if not isinstance(old, dict):
                 old = {}
 
-            if old.get("url") != url or not old.get("hash"):
+            old_text = old.get("text")
+            old_hash = old.get("hash")
+
+            valid_previous = (
+                old.get("url") == url
+                and isinstance(old_hash, str)
+                and isinstance(old_text, str)
+                and bool(old_text)
+                and hashlib.sha256(
+                    old_text.encode("utf-8")
+                ).hexdigest() == old_hash
+            )
+
+            if not valid_previous:
                 status = "baseline"
 
-            elif old["hash"] != current["hash"]:
+            elif old_hash != current["hash"]:
                 status = "changed"
 
-                if isinstance(old.get("text"), str):
-                    diff_text, truncated = make_text_diff(
-                        old["text"],
-                        current["text"],
-                    )
+                diff_text, truncated = make_text_diff(
+                    old_text,
+                    current["text"],
+                )
 
-                    diff_details = {
-                        "diff_available": True,
-                        "text_diff": diff_text,
-                        "diff_truncated": truncated,
-                    }
-                else:
-                    diff_details = {
-                        "diff_available": False,
-                    }
+                diff_details = {
+                    "diff_available": True,
+                    "text_diff": diff_text,
+                    "diff_truncated": truncated,
+                }
 
             else:
                 status = "unchanged"
