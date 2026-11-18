@@ -1,9 +1,10 @@
 
 #!/usr/bin/env python3
-"""FIELD//BASE Data Monitor: free, read-only website monitoring."""
+"""FIELD//BASE Data Monitor: read-only website monitoring."""
 
 from __future__ import annotations
 
+import difflib
 import hashlib
 import json
 import re
@@ -13,7 +14,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 from urllib.request import (
     HTTPRedirectHandler,
     Request,
@@ -23,6 +24,7 @@ from urllib.robotparser import RobotFileParser
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
 FIELDS_FILE = ROOT / "src/data/fields.ts"
 VERIFICATION_FILE = ROOT / "src/data/fieldVerification.ts"
 
@@ -32,10 +34,14 @@ REPORT_FILE = STATE_DIR / "report.md"
 JSON_REPORT_FILE = STATE_DIR / "report.json"
 
 USER_AGENT = "FIELD-BASE-Monitor/1.0 (+public website monitoring)"
+
 TIMEOUT = 12
 MAX_BYTES = 3_000_000
 MAX_ROBOTS_BYTES = 256_000
 REQUEST_DELAY = 2.0
+
+MAX_DIFF_LINES = 150
+MAX_DIFF_CHARS = 12_000
 
 DIRECTORY_URL = "https://sightin.jp/field/map/?area=kanto"
 
@@ -67,11 +73,6 @@ OPENER = build_opener(NoRedirectHandler)
 
 class TextExtractor(HTMLParser):
     SKIP_TAGS = {"script", "style", "noscript", "svg"}
-    VOID_TAGS = {
-        "area", "base", "br", "col", "embed", "hr",
-        "img", "input", "link", "meta", "param",
-        "source", "track", "wbr",
-    }
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -87,7 +88,11 @@ class TextExtractor(HTMLParser):
 
     def handle_endtag(self, tag):
         if tag in self.SKIP_TAGS and tag in self.stack:
-            index = len(self.stack) - 1 - self.stack[::-1].index(tag)
+            index = (
+                len(self.stack)
+                - 1
+                - self.stack[::-1].index(tag)
+            )
             self.stack = self.stack[:index]
 
     def handle_data(self, data):
@@ -96,8 +101,14 @@ class TextExtractor(HTMLParser):
 
     def text(self):
         return re.sub(
-            r"\s+", " ", " ".join(self.parts)
+            r"\s+",
+            " ",
+            " ".join(self.parts),
         ).strip()
+
+
+def now_utc():
+    return datetime.now(timezone.utc).isoformat()
 
 
 def parse_properties(block):
@@ -165,8 +176,6 @@ def origin_of(url):
 
 
 def redirect_result(exc, original_url):
-    from urllib.parse import urljoin
-
     location = exc.headers.get("Location")
 
     if not location:
@@ -180,6 +189,7 @@ def redirect_result(exc, original_url):
     if not valid_url(final_url):
         return {
             "status": "invalid_redirect",
+            "http_status": exc.code,
             "final_url": final_url,
         }
 
@@ -197,6 +207,7 @@ def fetch_robots(url, cache):
         return cache[origin]
 
     robots_url = origin + "/robots.txt"
+
     parser = RobotFileParser()
     parser.set_url(robots_url)
 
@@ -206,39 +217,66 @@ def fetch_robots(url, cache):
     )
 
     try:
-        with OPENER.open(request, timeout=TIMEOUT) as response:
+        with OPENER.open(
+            request, timeout=TIMEOUT
+        ) as response:
             data = response.read(MAX_ROBOTS_BYTES + 1)
 
             if len(data) > MAX_ROBOTS_BYTES:
-                cache[origin] = None
-                return None
+                result = {
+                    "status": "robots_unknown",
+                    "robots_error": "too_large",
+                }
+                cache[origin] = result
+                return result
 
             content = data.decode(
-                "utf-8", errors="replace"
+                "utf-8",
+                errors="replace",
             )
+
             parser.parse(content.splitlines())
-            cache[origin] = parser
+
+            result = {
+                "status": "ok",
+                "parser": parser,
+            }
 
     except HTTPError as exc:
         if exc.code in (404, 410):
             parser.parse([])
-            cache[origin] = parser
+
+            result = {
+                "status": "ok",
+                "parser": parser,
+            }
         else:
-            cache[origin] = None
+            result = {
+                "status": "robots_unknown",
+                "robots_http_status": exc.code,
+            }
 
-    except (URLError, TimeoutError, OSError, ValueError):
-        cache[origin] = None
+    except (URLError, TimeoutError, OSError, ValueError) as exc:
+        result = {
+            "status": "robots_unknown",
+            "robots_error_type": type(exc).__name__,
+        }
 
-    return cache[origin]
+    cache[origin] = result
+    return result
 
 
 def check_page(url, robots_cache):
-    parser = fetch_robots(url, robots_cache)
+    robots = fetch_robots(url, robots_cache)
 
-    if parser is None:
-        return {"status": "robots_unknown"}
+    if robots["status"] != "ok":
+        return {
+            key: value
+            for key, value in robots.items()
+            if key != "parser"
+        }
 
-    if not parser.can_fetch(USER_AGENT, url):
+    if not robots["parser"].can_fetch(USER_AGENT, url):
         return {"status": "robots_disallowed"}
 
     request = Request(
@@ -250,13 +288,18 @@ def check_page(url, robots_cache):
     )
 
     try:
-        with OPENER.open(request, timeout=TIMEOUT) as response:
+        with OPENER.open(
+            request, timeout=TIMEOUT
+        ) as response:
             content_type = response.headers.get(
                 "Content-Type", ""
             ).lower()
 
             if "text/html" not in content_type:
-                return {"status": "not_html"}
+                return {
+                    "status": "not_html",
+                    "content_type": content_type,
+                }
 
             content = response.read(MAX_BYTES + 1)
 
@@ -273,15 +316,18 @@ def check_page(url, robots_cache):
 
             try:
                 html = content.decode(
-                    charset, errors="replace"
+                    charset,
+                    errors="replace",
                 )
             except LookupError:
                 html = content.decode(
-                    "utf-8", errors="replace"
+                    "utf-8",
+                    errors="replace",
                 )
 
         extractor = TextExtractor()
         extractor.feed(html)
+
         text = extractor.text()
 
         if not text:
@@ -294,6 +340,7 @@ def check_page(url, robots_cache):
         return {
             "status": "ok",
             "hash": digest,
+            "text": text,
             "text_length": len(text),
         }
 
@@ -317,6 +364,36 @@ def check_page(url, robots_cache):
             "status": "parse_error",
             "error_type": type(exc).__name__,
         }
+
+
+def make_text_diff(before, after):
+    before_words = before.split()
+    after_words = after.split()
+
+    diff = difflib.unified_diff(
+        [word + "\n" for word in before_words],
+        [word + "\n" for word in after_words],
+        fromfile="previous",
+        tofile="current",
+        n=3,
+    )
+
+    lines = []
+    total_chars = 0
+    truncated = False
+
+    for line in diff:
+        if (
+            len(lines) >= MAX_DIFF_LINES
+            or total_chars + len(line) > MAX_DIFF_CHARS
+        ):
+            truncated = True
+            break
+
+        lines.append(line.rstrip("\n"))
+        total_chars += len(line)
+
+    return "\n".join(lines), truncated
 
 
 def load_snapshots():
@@ -364,29 +441,75 @@ def markdown_report(report):
         "",
         "## 施設別結果",
         "",
-        "| 施設 | 状態 | URL |",
-        "|---|---|---|",
+        "| 施設 | 状態 | URL | 詳細 |",
+        "|---|---|---|---|",
     ]
 
     for item in report["results"]:
         name = item["name"].replace("|", "\\|")
         url = item["url"].replace("|", "%7C")
 
+        detail = ""
+
+        if "robots_http_status" in item:
+            detail = f"robots HTTP {item['robots_http_status']}"
+        elif "http_status" in item:
+            detail = f"HTTP {item['http_status']}"
+        elif "robots_error" in item:
+            detail = item["robots_error"]
+        elif "robots_error_type" in item:
+            detail = item["robots_error_type"]
+        elif "error_type" in item:
+            detail = item["error_type"]
+
         lines.append(
-            f"| {name} | {item['status']} | {url} |"
+            f"| {name} | {item['status']} | {url} | {detail} |"
         )
 
+    changed_items = [
+        item
+        for item in report["results"]
+        if item["status"] == "changed"
+    ]
+
+    if changed_items:
+        lines.extend([
+            "",
+            "## 変更箇所",
+            "",
+        ])
+
+        for item in changed_items:
+            lines.append(f"### {item['name']}")
+            lines.append("")
+
+            if item.get("diff_available"):
+                lines.append("```diff")
+                lines.append(item.get("text_diff", ""))
+                lines.append("```")
+
+                if item.get("diff_truncated"):
+                    lines.append(
+                        "差分が長いため一部のみ表示しています。"
+                    )
+            else:
+                lines.append(
+                    "前回のテキストが保存されていないため、"
+                    "今回の変更箇所は表示できません。"
+                )
+
+            lines.append("")
+
     lines.extend([
-        "",
         "## 注意事項",
         "",
         "- ページ変更は料金・営業状況の変更を意味しません。",
         "- URLへのアクセス成功は営業中の証明ではありません。",
         "- 取得失敗やアクセス制限は閉業の証明ではありません。",
-        "- 監視対象は登録済みの公式URLのみです。",
         "- JavaScript生成部分は取得できない場合があります。",
         "- 施設データは自動変更しません。",
-        "- リダイレクト先は自動取得せず、確認対象とします。",
+        "- リダイレクト先は自動取得しません。",
+        "- 差分は抽出テキストの単語単位の比較です。",
         "",
     ])
 
@@ -399,6 +522,7 @@ def main():
     fields = load_fields()
     previous = load_snapshots()
     updated = dict(previous)
+
     robots_cache = {}
     results = []
 
@@ -431,6 +555,7 @@ def main():
 
         current = check_page(url, robots_cache)
         status = current["status"]
+        diff_details = {}
 
         if status == "ok":
             old = previous.get(field_id)
@@ -440,17 +565,34 @@ def main():
 
             if old.get("url") != url or not old.get("hash"):
                 status = "baseline"
+
             elif old["hash"] != current["hash"]:
                 status = "changed"
+
+                if isinstance(old.get("text"), str):
+                    diff_text, truncated = make_text_diff(
+                        old["text"],
+                        current["text"],
+                    )
+
+                    diff_details = {
+                        "diff_available": True,
+                        "text_diff": diff_text,
+                        "diff_truncated": truncated,
+                    }
+                else:
+                    diff_details = {
+                        "diff_available": False,
+                    }
+
             else:
                 status = "unchanged"
 
             updated[field_id] = {
                 "url": url,
                 "hash": current["hash"],
-                "checked_at": datetime.now(
-                    timezone.utc
-                ).isoformat(),
+                "text": current["text"],
+                "checked_at": now_utc(),
             }
 
         results.append({
@@ -458,10 +600,11 @@ def main():
             "name": field["name"],
             "url": url,
             "status": status,
+            **diff_details,
             **{
                 key: value
                 for key, value in current.items()
-                if key not in ("status", "hash")
+                if key not in ("status", "hash", "text")
             },
         })
 
@@ -479,9 +622,7 @@ def main():
     }
 
     report = {
-        "checked_at": datetime.now(
-            timezone.utc
-        ).isoformat(),
+        "checked_at": now_utc(),
         "total_fields": len(fields),
         "monitored": sum(
             status != "missing_url"
@@ -508,6 +649,7 @@ def main():
 
     print("\n=== FIELD//BASE DATA MONITOR ===")
     print(f"登録施設: {report['total_fields']}")
+    print(f"監視対象: {report['monitored']}")
     print(f"公式URL未登録: {report['missing_url']}")
     print(f"初回基準: {report['baseline']}")
     print(f"変更検出: {report['changed']}")

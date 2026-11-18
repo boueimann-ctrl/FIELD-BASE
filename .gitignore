@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# FIELD//BASE monitoring data
+frontend/data-monitor/snapshots.json
+frontend/data-monitor/report.json
+frontend/data-monitor/report.md
+
+# Local backups
+*.bak
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
