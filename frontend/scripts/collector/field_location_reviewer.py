@@ -1,15 +1,14 @@
 
 #!/usr/bin/env python3
-"""FIELD//BASE local research manager.
+"""FIELD//BASE Unified Research Manager.
 
-Features:
-- Review official websites (HTTP and HTTPS).
-- Review facility coordinates independently.
-- Save research progress to CSV.
-- Preserve other CSV columns.
-- Create backups before saving.
-- Restrict server access to localhost.
-- Protect POST requests with a CSRF token.
+Local tool for reviewing:
+- Official website URLs
+- Addresses extracted from official websites
+- Facility coordinates
+
+The tool updates fieldResearch.csv only.
+It does not publish changes to the application.
 """
 
 from __future__ import annotations
@@ -24,20 +23,18 @@ import shutil
 import tempfile
 import threading
 import webbrowser
+
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-ROOT = Path(__file__).resolve().parents[2]
 
-CSV_PATH = (
-    ROOT
-    / "src"
-    / "data"
-    / "generated"
-    / "fieldResearch.csv"
-)
+ROOT = Path(__file__).resolve().parents[2]
+GENERATED = ROOT / "src" / "data" / "generated"
+
+CSV_PATH = GENERATED / "fieldResearch.csv"
+CANDIDATES_PATH = GENERATED / "addressCandidates.json"
 
 HOST = "127.0.0.1"
 PORT = 8765
@@ -59,6 +56,12 @@ REQUIRED_COLUMNS = {
     "notes",
 }
 
+ADDRESS_COLUMNS = (
+    "address_review_status",
+    "address_review_source",
+    "address_review_note",
+)
+
 
 def load_data():
     if not CSV_PATH.exists():
@@ -77,26 +80,93 @@ def load_data():
 
     if missing:
         raise ValueError(
-            "不足しているCSV列: "
+            "CSVの必須列がありません: "
             + ", ".join(sorted(missing))
         )
 
-    ids = [
-        row["field_id"].strip()
-        for row in rows
-    ]
+    ids = [row["field_id"].strip() for row in rows]
 
     if not all(ids):
-        raise ValueError(
-            "施設IDが空の行があります"
-        )
+        raise ValueError("施設IDが空の行があります")
 
     if len(ids) != len(set(ids)):
-        raise ValueError(
-            "施設IDが重複しています"
-        )
+        raise ValueError("施設IDが重複しています")
 
     return columns, rows
+
+
+def load_candidates():
+    if not CANDIDATES_PATH.exists():
+        return {}
+
+    with CANDIDATES_PATH.open(
+        "r",
+        encoding="utf-8",
+    ) as file:
+        data = json.load(file)
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            "住所候補JSONの形式が不正です"
+        )
+
+    return data
+
+
+def valid_official_url(value):
+    if not isinstance(value, str):
+        return False
+
+    if (
+        not value
+        or value != value.strip()
+        or len(value) > 2048
+        or any(ord(char) < 33 for char in value)
+    ):
+        return False
+
+    try:
+        parsed = urlparse(value)
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError:
+        return False
+
+    if parsed.scheme not in {"http", "https"}:
+        return False
+
+    if not hostname or port is not None:
+        return False
+
+    if parsed.username or parsed.password:
+        return False
+
+    hostname = hostname.lower()
+
+    if (
+        hostname == "localhost"
+        or hostname.endswith(
+            (
+                ".localhost",
+                ".local",
+                ".internal",
+                ".test",
+                ".invalid",
+            )
+        )
+    ):
+        return False
+
+    try:
+        ip = ipaddress.ip_address(hostname)
+    except ValueError:
+        if "." not in hostname:
+            return False
+    else:
+        if not ip.is_global:
+            return False
+
+    return True
 
 
 def valid_coordinate(latitude, longitude):
@@ -109,75 +179,39 @@ def valid_coordinate(latitude, longitude):
     return (
         math.isfinite(lat)
         and math.isfinite(lon)
-        and 20.0 <= lat <= 46.0
-        and 122.0 <= lon <= 154.0
+        and 20 <= lat <= 46
+        and 122 <= lon <= 154
     )
 
 
-def valid_official_url(value):
-    """Accept public HTTP and HTTPS website URLs."""
-
-    if not isinstance(value, str):
+def valid_address_candidate(row, candidate):
+    if not isinstance(candidate, dict):
         return False
 
-    if not value:
+    if candidate.get("sourceType") != "official_html":
         return False
 
-    if value != value.strip():
+    source_url = candidate.get("sourceUrl", "")
+
+    confirmed_url = row.get(
+        "confirmed_official_url", ""
+    ).strip()
+
+    if not source_url or source_url != confirmed_url:
         return False
 
-    if len(value) > 2048:
+    if not valid_official_url(source_url):
         return False
 
-    if any(
-        ord(character) < 33
-        for character in value
-    ):
+    addresses = candidate.get("candidateAddresses")
+
+    if not isinstance(addresses, list):
         return False
 
-    try:
-        parsed = urlparse(value)
-        hostname = parsed.hostname
-        port = parsed.port
-    except ValueError:
-        return False
-
-    if parsed.scheme not in {
-        "http",
-        "https",
-    }:
-        return False
-
-    if not hostname:
-        return False
-
-    if port is not None:
-        return False
-
-    if parsed.username or parsed.password:
-        return False
-
-    if hostname.lower() == "localhost":
-        return False
-
-    if hostname.lower().endswith(".localhost"):
-        return False
-
-    try:
-        ip = ipaddress.ip_address(hostname)
-    except ValueError:
-        if "." not in hostname:
-            return False
-
-        if hostname.lower().endswith(
-            (".local", ".internal", ".test", ".invalid")
-        ):
-            return False
-    else:
-        if not ip.is_global:
-            return False
-
-    return True
+    return all(
+        isinstance(address, str)
+        for address in addresses
+    )
 
 
 def backup_file():
@@ -195,6 +229,14 @@ def backup_file():
 
 
 def save_data(columns, rows):
+    columns = list(columns)
+
+    for column in ADDRESS_COLUMNS:
+        if column not in columns:
+            columns.append(column)
+
+    backup_file()
+
     temporary = None
 
     try:
@@ -213,6 +255,7 @@ def save_data(columns, rows):
                 file,
                 fieldnames=columns,
                 extrasaction="ignore",
+                lineterminator="\n",
             )
 
             writer.writeheader()
@@ -221,73 +264,68 @@ def save_data(columns, rows):
             file.flush()
             os.fsync(file.fileno())
 
-        os.replace(
-            temporary,
-            CSV_PATH,
-        )
+        os.replace(temporary, CSV_PATH)
 
     finally:
         if temporary is not None:
-            temporary.unlink(
-                missing_ok=True
-            )
+            temporary.unlink(missing_ok=True)
 
 
-def serialize_rows(rows):
+def serialize_rows(rows, candidates):
     result = []
 
     for row in rows:
+        field_id = row["field_id"]
+        candidate = candidates.get(field_id)
+
+        if not valid_address_candidate(
+            row,
+            candidate,
+        ):
+            candidate = None
+
         result.append({
-            "id": row.get(
-                "field_id", ""
-            ),
-            "name": row.get(
-                "field_name", ""
-            ),
-            "prefecture": row.get(
-                "prefecture", ""
-            ),
-            "city": row.get(
-                "city", ""
-            ),
-            "address": row.get(
-                "address", ""
-            ),
-            "quality": row.get(
-                "address_quality", ""
-            ),
-            "website": row.get(
-                "website", ""
-            ),
-            "website_status": row.get(
-                "website_status", ""
-            ),
+            "id": field_id,
+            "name": row.get("field_name", ""),
+            "prefecture": row.get("prefecture", ""),
+            "city": row.get("city", ""),
+            "address": row.get("address", ""),
+            "website": row.get("website", ""),
             "confirmed_url": row.get(
                 "confirmed_official_url", ""
             ),
-            "search_url": row.get(
-                "official_site_search_url", ""
-            ),
-            "maps_url": row.get(
-                "maps_search_url", ""
-            ),
-            "latitude": row.get(
-                "latitude", ""
-            ),
-            "longitude": row.get(
-                "longitude", ""
-            ),
+            "latitude": row.get("latitude", ""),
+            "longitude": row.get("longitude", ""),
             "candidate_latitude": row.get(
                 "candidate_latitude", ""
             ),
             "candidate_longitude": row.get(
                 "candidate_longitude", ""
             ),
-            "status": row.get(
+            "location_status": row.get(
                 "review_status", "pending"
             ),
-            "notes": row.get(
-                "notes", ""
+            "notes": row.get("notes", ""),
+            "address_status": row.get(
+                "address_review_status", ""
+            ) or "pending",
+            "address_source": row.get(
+                "address_review_source", ""
+            ),
+            "address_note": row.get(
+                "address_review_note", ""
+            ),
+            "address_candidates": (
+                candidate.get("candidateAddresses", [])
+                if candidate else []
+            ),
+            "candidate_source": (
+                candidate.get("sourceUrl", "")
+                if candidate else ""
+            ),
+            "candidate_date": (
+                candidate.get("collectedAt", "")
+                if candidate else ""
             ),
         })
 
@@ -296,15 +334,20 @@ def serialize_rows(rows):
 
 def render_page():
     _, rows = load_data()
+    candidates = load_candidates()
 
     payload = json.dumps(
-        serialize_rows(rows),
+        serialize_rows(rows, candidates),
         ensure_ascii=False,
     )
 
-    payload = payload.replace(
-        "<",
-        "\\u003c",
+    payload = (
+        payload
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+        .replace("\u2028", "\\u2028")
+        .replace("\u2029", "\\u2029")
     )
 
     token = json.dumps(TOKEN)
@@ -313,11 +356,11 @@ def render_page():
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta
-  name="viewport"
-  content="width=device-width,initial-scale=1"
->
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+
 <title>FIELD//BASE Research Manager</title>
+
 <style>
 :root {
   color-scheme: dark;
@@ -357,14 +400,14 @@ h1 {
 }
 
 main {
-  max-width: 1350px;
+  max-width: 1400px;
   margin: auto;
   padding: 24px;
 }
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -386,8 +429,8 @@ main {
 }
 
 .stat span {
-  font-size: 12px;
   color: #aab2b9;
+  font-size: 12px;
 }
 
 .controls {
@@ -409,8 +452,8 @@ textarea {
 }
 
 input:focus,
-textarea:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: 2px solid #8cbdad;
 }
 
@@ -464,6 +507,7 @@ select:focus {
   color: #aab2b9;
   font-size: 12px;
   line-height: 1.6;
+  white-space: pre-line;
 }
 
 .detail {
@@ -537,9 +581,21 @@ a.primary {
   color: #14201d;
 }
 
+button.danger {
+  background: #54383a;
+  color: #ffd7d7;
+}
+
 button:disabled {
   opacity: .4;
   cursor: not-allowed;
+}
+
+.current-address {
+  background: #252a2e;
+  border-radius: 8px;
+  padding: 14px;
+  overflow-wrap: anywhere;
 }
 
 .success {
@@ -588,11 +644,12 @@ button:disabled {
 }
 </style>
 </head>
+
 <body>
 <header>
   <h1>FIELD//BASE / RESEARCH MANAGER</h1>
   <div class="sub">
-    公式サイト・施設座標の確認とCSV管理
+    公式URL・住所・座標の確認とCSV管理
   </div>
 </header>
 
@@ -609,13 +666,18 @@ button:disabled {
     </div>
 
     <div class="stat">
+      <strong id="addressCount">0</strong>
+      <span>住所承認済み</span>
+    </div>
+
+    <div class="stat">
       <strong id="locationCount">0</strong>
       <span>座標確認済み</span>
     </div>
 
     <div class="stat">
       <strong id="candidateCount">0</strong>
-      <span>未確認の座標候補</span>
+      <span>未承認の住所候補</span>
     </div>
   </div>
 
@@ -633,14 +695,20 @@ button:disabled {
       <option value="officialVerified">
         公式URL確認済み
       </option>
+      <option value="addressPending">
+        住所未承認
+      </option>
+      <option value="addressApproved">
+        住所承認済み
+      </option>
+      <option value="addressCandidate">
+        住所候補あり
+      </option>
       <option value="locationPending">
         座標未確認
       </option>
       <option value="locationVerified">
         座標確認済み
-      </option>
-      <option value="candidate">
-        座標候補あり
       </option>
     </select>
   </div>
@@ -677,7 +745,7 @@ button:disabled {
       </div>
 
       <div class="section">
-        <h3>公式サイトの確認</h3>
+        <h3>1. 公式サイトの確認</h3>
 
         <div
           class="notice"
@@ -714,7 +782,7 @@ button:disabled {
           id="officialUrl"
           class="full"
           type="url"
-          placeholder="http://example.jp/"
+          placeholder="https://example.jp/"
         >
 
         <div
@@ -727,7 +795,7 @@ button:disabled {
             class="primary"
             id="saveOfficial"
           >
-            公式URLを確認済みとして保存
+            公式URLを保存
           </button>
         </div>
 
@@ -736,17 +804,96 @@ button:disabled {
           class="message"
           role="status"
         ></div>
+      </div>
+
+      <div class="section">
+        <h3>2. 住所候補の確認</h3>
+
+        <label class="label">
+          現在の登録住所
+        </label>
+
+        <div
+          class="current-address"
+          id="registeredAddress"
+        ></div>
+
+        <div
+          class="notice"
+          id="addressStatus"
+        ></div>
+
+        <label
+          class="label"
+          for="addressCandidate"
+        >
+          公式サイトから抽出した住所候補
+        </label>
+
+        <select
+          id="addressCandidate"
+          class="full"
+        ></select>
+
+        <div class="actions">
+          <a
+            id="addressSource"
+            class="primary"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            住所の取得元を確認
+          </a>
+        </div>
+
+        <div
+          class="notice"
+          id="addressCandidateInfo"
+        ></div>
+
+        <label
+          class="label"
+          for="addressNote"
+        >
+          住所確認メモ
+        </label>
+
+        <textarea
+          id="addressNote"
+          placeholder="住所を確認した根拠"
+        ></textarea>
+
+        <div class="actions">
+          <button
+            id="approveAddress"
+            class="primary"
+          >
+            住所を承認
+          </button>
+
+          <button
+            id="rejectAddress"
+            class="danger"
+          >
+            候補を却下
+          </button>
+        </div>
+
+        <div
+          id="addressMessage"
+          class="message"
+          role="status"
+        ></div>
 
         <p class="notice">
-          HTTP・HTTPSの両方に対応しています。
-          施設名・所在地・運営情報を確認した
-          公式サイトだけを登録してください。
-          HTTPは通信が暗号化されません。
+          候補は未検証です。
+          公式サイトの住所表記を目視確認してください。
+          住所の承認は座標の確認状態を変更しません。
         </p>
       </div>
 
       <div class="section">
-        <h3>座標の確認</h3>
+        <h3>3. 座標の確認</h3>
 
         <div class="actions">
           <a
@@ -756,14 +903,6 @@ button:disabled {
             rel="noopener noreferrer"
           >
             Googleマップ
-          </a>
-
-          <a
-            id="osm"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            OpenStreetMap
           </a>
         </div>
 
@@ -828,12 +967,6 @@ button:disabled {
           class="message"
           role="status"
         ></div>
-
-        <p class="notice">
-          候補座標は未検証です。
-          地図上の位置を確認してから保存してください。
-          公開用JSONへの反映は別操作です。
-        </p>
       </div>
     </section>
   </div>
@@ -849,26 +982,32 @@ let saving = false;
 const el = id =>
   document.getElementById(id);
 
+function selected() {
+  return fields.find(
+    field => field.id === selectedId
+  ) || null;
+}
+
 function officialVerified(field) {
   return Boolean(field.confirmed_url);
 }
 
-function locationVerified(field) {
-  return field.status === "verified";
+function addressApproved(field) {
+  return field.address_status === "approved";
 }
 
-function hasCandidate(field) {
+function locationVerified(field) {
+  return field.location_status === "verified";
+}
+
+function hasAddressCandidate(field) {
+  return field.address_candidates.length > 0;
+}
+
+function hasCoordinateCandidate(field) {
   return Boolean(
     field.candidate_latitude &&
     field.candidate_longitude
-  );
-}
-
-function selected() {
-  return (
-    fields.find(
-      field => field.id === selectedId
-    ) || null
   );
 }
 
@@ -882,11 +1021,11 @@ function visibleFields() {
 
   return fields.filter(field => {
     const text = [
+      field.id,
       field.name,
-      field.address,
       field.prefecture,
       field.city,
-      field.id
+      field.address
     ]
       .join(" ")
       .toLowerCase();
@@ -903,19 +1042,24 @@ function visibleFields() {
       return officialVerified(field);
     }
 
+    if (filter === "addressPending") {
+      return !addressApproved(field);
+    }
+
+    if (filter === "addressApproved") {
+      return addressApproved(field);
+    }
+
+    if (filter === "addressCandidate") {
+      return hasAddressCandidate(field);
+    }
+
     if (filter === "locationPending") {
       return !locationVerified(field);
     }
 
     if (filter === "locationVerified") {
       return locationVerified(field);
-    }
-
-    if (filter === "candidate") {
-      return (
-        hasCandidate(field) &&
-        !locationVerified(field)
-      );
     }
 
     return true;
@@ -927,20 +1071,19 @@ function updateStats() {
     fields.length;
 
   el("officialCount").textContent =
-    fields.filter(
-      officialVerified
-    ).length;
+    fields.filter(officialVerified).length;
+
+  el("addressCount").textContent =
+    fields.filter(addressApproved).length;
 
   el("locationCount").textContent =
-    fields.filter(
-      locationVerified
-    ).length;
+    fields.filter(locationVerified).length;
 
   el("candidateCount").textContent =
     fields.filter(
       field =>
-        hasCandidate(field) &&
-        !locationVerified(field)
+        hasAddressCandidate(field) &&
+        !addressApproved(field)
     ).length;
 }
 
@@ -956,7 +1099,6 @@ function renderList() {
       document.createElement("div");
 
     empty.className = "empty";
-
     empty.textContent =
       "条件に一致する施設がありません。";
 
@@ -995,17 +1137,20 @@ function renderList() {
       ) +
       " / " +
       (
+        addressApproved(field)
+          ? "住所 ✓"
+          : "住所 未承認"
+      ) +
+      " / " +
+      (
         locationVerified(field)
           ? "座標 ✓"
           : "座標 未確認"
       ) +
-      " / " +
+      "\n" +
       field.address;
 
-    button.append(
-      name,
-      meta
-    );
+    button.append(name, meta);
 
     button.onclick = () =>
       selectField(field.id);
@@ -1025,11 +1170,7 @@ function message(
 
   node.className =
     "message " +
-    (
-      error
-        ? "error"
-        : "success"
-    );
+    (error ? "error" : "success");
 }
 
 function safeWebsiteUrl(value) {
@@ -1044,10 +1185,7 @@ function safeWebsiteUrl(value) {
       return "";
     }
 
-    if (
-      url.username ||
-      url.password
-    ) {
+    if (url.username || url.password) {
       return "";
     }
 
@@ -1063,8 +1201,7 @@ function setLink(id, url) {
 
   if (url) {
     node.href = url;
-    node.style.display =
-      "inline-block";
+    node.style.display = "inline-block";
   } else {
     node.removeAttribute("href");
     node.style.display = "none";
@@ -1075,20 +1212,10 @@ function updateHttpWarning() {
   const value =
     el("officialUrl").value.trim();
 
-  const warning =
-    el("httpWarning");
-
-  if (
-    value.toLowerCase().startsWith(
-      "http://"
-    )
-  ) {
-    warning.textContent =
-      "注意: HTTP通信です。通信内容は暗号化されません。"
-      + "施設情報を確認してから登録してください。";
-  } else {
-    warning.textContent = "";
-  }
+  el("httpWarning").textContent =
+    value.toLowerCase().startsWith("http://")
+      ? "注意: HTTP通信は暗号化されません。"
+      : "";
 }
 
 function clearDetail() {
@@ -1099,20 +1226,28 @@ function clearDetail() {
     "対象施設がありません";
   el("address").textContent = "";
   el("websiteInfo").textContent = "";
-
-  el("officialUrl").value = "";
-  el("latitude").value = "";
-  el("longitude").value = "";
-  el("notes").value = "";
+  el("registeredAddress").textContent = "";
+  el("addressStatus").textContent = "";
+  el("addressCandidateInfo").textContent = "";
   el("candidate").textContent = "";
 
-  updateHttpWarning();
+  for (const id of [
+    "officialUrl",
+    "latitude",
+    "longitude",
+    "notes",
+    "addressNote"
+  ]) {
+    el(id).value = "";
+  }
+
+  el("addressCandidate").replaceChildren();
 
   for (const id of [
     "searchOfficial",
     "openRegistered",
-    "google",
-    "osm"
+    "addressSource",
+    "google"
   ]) {
     setLink(id, "");
   }
@@ -1121,12 +1256,15 @@ function clearDetail() {
     "previous",
     "next",
     "saveOfficial",
+    "approveAddress",
+    "rejectAddress",
     "saveLocation"
   ]) {
     el(id).disabled = true;
   }
 
   message("officialMessage", "");
+  message("addressMessage", "");
   message("locationMessage", "");
 
   renderList();
@@ -1141,13 +1279,10 @@ function selectField(id) {
 
   if (index < 0) {
     if (visible.length) {
-      selectField(
-        visible[0].id
-      );
+      selectField(visible[0].id);
     } else {
       clearDetail();
     }
-
     return;
   }
 
@@ -1161,8 +1296,7 @@ function selectField(id) {
     visible.length +
     "施設";
 
-  el("name").textContent =
-    field.name;
+  el("name").textContent = field.name;
 
   el("address").textContent =
     field.prefecture +
@@ -1174,7 +1308,7 @@ function selectField(id) {
   el("websiteInfo").textContent =
     field.website
       ? "既存URL: " + field.website
-      : "既存の公式URLは未登録です。";
+      : "既存URLは未登録です。";
 
   el("officialUrl").value =
     field.confirmed_url ||
@@ -1199,9 +1333,56 @@ function selectField(id) {
 
   setLink(
     "openRegistered",
-    safeWebsiteUrl(
-      field.website
-    )
+    safeWebsiteUrl(field.website)
+  );
+
+  el("registeredAddress").textContent =
+    field.address || "未登録";
+
+  el("addressStatus").textContent =
+    "住所確認状態: " +
+    (
+      field.address_status === "approved"
+        ? "承認済み"
+        : field.address_status === "rejected"
+          ? "却下済み"
+          : "未確認"
+    );
+
+  const selector = el("addressCandidate");
+
+  selector.replaceChildren();
+
+  for (const address of field.address_candidates) {
+    const option =
+      document.createElement("option");
+
+    option.value = address;
+    option.textContent = address;
+
+    if (address === field.address) {
+      option.selected = true;
+    }
+
+    selector.appendChild(option);
+  }
+
+  el("addressNote").value =
+    field.address_note || "";
+
+  el("addressCandidateInfo").textContent =
+    field.address_candidates.length
+      ? (
+          "候補: " +
+          field.address_candidates.length +
+          "件 / 取得日: " +
+          field.candidate_date
+        )
+      : "現在の公式URLに対応する住所候補はありません。";
+
+  setLink(
+    "addressSource",
+    safeWebsiteUrl(field.candidate_source)
   );
 
   const mapQuery =
@@ -1214,12 +1395,6 @@ function selectField(id) {
   setLink(
     "google",
     "https://www.google.com/maps/search/?api=1&query=" +
-    mapQuery
-  );
-
-  setLink(
-    "osm",
-    "https://www.openstreetmap.org/search?query=" +
     mapQuery
   );
 
@@ -1237,13 +1412,13 @@ function selectField(id) {
     field.notes || "";
 
   el("candidate").textContent =
-    hasCandidate(field)
+    hasCoordinateCandidate(field)
       ? (
           "座標候補: " +
           field.candidate_latitude +
           ", " +
           field.candidate_longitude +
-          "（保存前に確認が必要）"
+          "（未検証）"
         )
       : "座標候補なし";
 
@@ -1253,13 +1428,20 @@ function selectField(id) {
   el("next").disabled =
     index === visible.length - 1;
 
-  el("saveOfficial").disabled =
-    saving;
+  el("saveOfficial").disabled = saving;
+  el("saveLocation").disabled = saving;
 
-  el("saveLocation").disabled =
-    saving;
+  const addressDisabled =
+    saving || !hasAddressCandidate(field);
+
+  el("approveAddress").disabled =
+    addressDisabled;
+
+  el("rejectAddress").disabled =
+    addressDisabled;
 
   message("officialMessage", "");
+  message("addressMessage", "");
   message("locationMessage", "");
 
   renderList();
@@ -1269,19 +1451,13 @@ function move(direction) {
   const visible = visibleFields();
 
   const index = visible.findIndex(
-    field =>
-      field.id === selectedId
+    field => field.id === selectedId
   );
 
   const next = index + direction;
 
-  if (
-    next >= 0 &&
-    next < visible.length
-  ) {
-    selectField(
-      visible[next].id
-    );
+  if (next >= 0 && next < visible.length) {
+    selectField(visible[next].id);
   }
 }
 
@@ -1295,71 +1471,52 @@ function refreshSelection() {
 
   if (
     !visible.some(
-      field =>
-        field.id === selectedId
+      field => field.id === selectedId
     )
   ) {
-    selectField(
-      visible[0].id
-    );
+    selectField(visible[0].id);
   } else {
     selectField(selectedId);
   }
 }
 
-function afterSave(field, kind) {
-  updateStats();
+function disableSaving(value) {
+  saving = value;
 
-  const visible = visibleFields();
+  const field = selected();
 
-  if (
-    !visible.some(
-      item =>
-        item.id === field.id
-    )
-  ) {
-    if (visible.length) {
-      selectField(
-        visible[0].id
-      );
-    } else {
-      clearDetail();
-    }
-  } else {
-    selectField(field.id);
-  }
+  el("saveOfficial").disabled =
+    value || !field;
 
-  message(
-    kind === "official"
-      ? "officialMessage"
-      : "locationMessage",
-    field.name +
-    " を保存しました。"
-  );
+  el("saveLocation").disabled =
+    value || !field;
+
+  const addressDisabled =
+    value ||
+    !field ||
+    !hasAddressCandidate(field);
+
+  el("approveAddress").disabled =
+    addressDisabled;
+
+  el("rejectAddress").disabled =
+    addressDisabled;
 }
 
-async function postData(
-  path,
-  payload
-) {
+async function postData(path, payload) {
   const response = await fetch(
     path,
     {
       method: "POST",
       headers: {
-        "Content-Type":
-          "application/json",
-        "X-Review-Token":
-          token
+        "Content-Type": "application/json",
+        "X-Review-Token": token
       },
-      body: JSON.stringify(
-        payload
-      )
+      body: JSON.stringify(payload)
     }
   );
 
-  const result =
-    await response.json();
+  const result = await response.json();
 
   if (!response.ok) {
     throw new Error(
@@ -1371,21 +1528,24 @@ async function postData(
   return result;
 }
 
+function afterSave(field, messageId) {
+  updateStats();
+  refreshSelection();
+
+  message(
+    messageId,
+    field.name + " の確認結果を保存しました。"
+  );
+}
+
 async function saveOfficial() {
-  if (saving) {
-    return;
-  }
+  if (saving) return;
 
   const field = selected();
-
-  if (!field) {
-    return;
-  }
+  if (!field) return;
 
   const url =
-    el("officialUrl")
-      .value
-      .trim();
+    el("officialUrl").value.trim();
 
   if (!safeWebsiteUrl(url)) {
     message(
@@ -1396,37 +1556,18 @@ async function saveOfficial() {
     return;
   }
 
-  const isHttp =
-    url.toLowerCase().startsWith(
-      "http://"
-    );
-
-  const warning = isHttp
-    ? (
-        "\n\n注意: HTTP通信のため"
-        + "暗号化されていません。"
-      )
-    : "";
-
   if (
     !window.confirm(
       field.name +
       "\n" +
       url +
-      "\n\n施設名・所在地・運営情報を確認しましたか？" +
-      warning
+      "\n\n公式サイトを目視確認しましたか？"
     )
   ) {
     return;
   }
 
-  saving = true;
-
-  el("saveOfficial").disabled =
-    true;
-
-  el("saveLocation").disabled =
-    true;
+  disableSaving(true);
 
   try {
     await postData(
@@ -1437,57 +1578,136 @@ async function saveOfficial() {
       }
     );
 
+    const changed =
+      field.confirmed_url !== url;
+
     field.confirmed_url = url;
 
-    afterSave(
-      field,
-      "official"
-    );
+    if (changed) {
+      field.address_candidates = [];
+      field.candidate_source = "";
+      field.candidate_date = "";
+      field.address_status = "pending";
+      field.address_source = "";
+      field.address_note = "";
+    }
+
+    afterSave(field, "officialMessage");
 
   } catch (error) {
     message(
       "officialMessage",
-      error.message ||
-      "保存失敗",
+      error.message,
       true
     );
 
   } finally {
-    saving = false;
+    disableSaving(false);
+  }
+}
 
-    el("saveOfficial").disabled =
-      !selected();
+async function reviewAddress(action) {
+  if (saving) return;
 
-    el("saveLocation").disabled =
-      !selected();
+  const field = selected();
+
+  if (
+    !field ||
+    !hasAddressCandidate(field)
+  ) {
+    return;
+  }
+
+  const address =
+    el("addressCandidate").value;
+
+  const note =
+    el("addressNote").value.trim();
+
+  if (
+    !field.address_candidates.includes(address)
+  ) {
+    message(
+      "addressMessage",
+      "住所候補を選択してください。",
+      true
+    );
+    return;
+  }
+
+  const label =
+    action === "approve"
+      ? "承認"
+      : "却下";
+
+  if (
+    !window.confirm(
+      field.name +
+      "\n" +
+      address +
+      "\n\nこの住所候補を" +
+      label +
+      "しますか？"
+    )
+  ) {
+    return;
+  }
+
+  disableSaving(true);
+
+  try {
+    await postData(
+      "/api/address",
+      {
+        field_id: field.id,
+        action,
+        address,
+        note
+      }
+    );
+
+    field.address_status =
+      action === "approve"
+        ? "approved"
+        : "rejected";
+
+    field.address_source =
+      field.candidate_source;
+
+    field.address_note = note;
+
+    if (action === "approve") {
+      field.address = address;
+    }
+
+    afterSave(field, "addressMessage");
+
+  } catch (error) {
+    message(
+      "addressMessage",
+      error.message,
+      true
+    );
+
+  } finally {
+    disableSaving(false);
   }
 }
 
 async function saveLocation() {
-  if (saving) {
-    return;
-  }
+  if (saving) return;
 
   const field = selected();
-
-  if (!field) {
-    return;
-  }
+  if (!field) return;
 
   const latitude =
-    el("latitude")
-      .value
-      .trim();
+    el("latitude").value.trim();
 
   const longitude =
-    el("longitude")
-      .value
-      .trim();
+    el("longitude").value.trim();
 
   const notes =
-    el("notes")
-      .value
-      .trim();
+    el("notes").value.trim();
 
   const lat = Number(latitude);
   const lon = Number(longitude);
@@ -1526,19 +1746,13 @@ async function saveLocation() {
       latitude +
       "\n経度: " +
       longitude +
-      "\n\n位置を確認済みとして保存しますか？"
+      "\n\n座標を確認済みとして保存しますか？"
     )
   ) {
     return;
   }
 
-  saving = true;
-
-  el("saveOfficial").disabled =
-    true;
-
-  el("saveLocation").disabled =
-    true;
+  disableSaving(true);
 
   try {
     await postData(
@@ -1554,29 +1768,19 @@ async function saveLocation() {
     field.latitude = latitude;
     field.longitude = longitude;
     field.notes = notes;
-    field.status = "verified";
+    field.location_status = "verified";
 
-    afterSave(
-      field,
-      "location"
-    );
+    afterSave(field, "locationMessage");
 
   } catch (error) {
     message(
       "locationMessage",
-      error.message ||
-      "保存失敗",
+      error.message,
       true
     );
 
   } finally {
-    saving = false;
-
-    el("saveOfficial").disabled =
-      !selected();
-
-    el("saveLocation").disabled =
-      !selected();
+    disableSaving(false);
   }
 }
 
@@ -1603,6 +1807,16 @@ el("next").addEventListener(
 el("saveOfficial").addEventListener(
   "click",
   saveOfficial
+);
+
+el("approveAddress").addEventListener(
+  "click",
+  () => reviewAddress("approve")
+);
+
+el("rejectAddress").addEventListener(
+  "click",
+  () => reviewAddress("reject")
 );
 
 el("saveLocation").addEventListener(
@@ -1650,6 +1864,11 @@ class Handler(BaseHTTPRequestHandler):
         )
 
         self.send_header(
+            "Content-Length",
+            str(len(body)),
+        )
+
+        self.send_header(
             "Cache-Control",
             "no-store",
         )
@@ -1673,6 +1892,18 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_json(self, status, data):
+        body = json.dumps(
+            data,
+            ensure_ascii=False,
+        ).encode("utf-8")
+
+        self.send_content(
+            status,
+            body,
+            "application/json; charset=utf-8",
+        )
+
     def do_GET(self):
         if urlparse(self.path).path != "/":
             self.send_error(404)
@@ -1688,46 +1919,34 @@ class Handler(BaseHTTPRequestHandler):
                 "text/html; charset=utf-8",
             )
 
-        except (
-            OSError,
-            ValueError,
-        ) as error:
-            self.send_error(
-                500,
-                str(error),
-            )
+        except (OSError, ValueError) as error:
+            self.send_error(500, str(error))
 
     def do_POST(self):
-        path = urlparse(
-            self.path
-        ).path
+        path = urlparse(self.path).path
 
         if path not in {
             "/api/official",
+            "/api/address",
             "/api/location",
         }:
             self.send_error(404)
             return
 
-        origin = self.headers.get(
-            "Origin"
-        )
+        origin = self.headers.get("Origin")
+        expected_origin = f"http://{HOST}:{PORT}"
 
-        expected_origin = (
-            f"http://{HOST}:{PORT}"
-        )
-
-        if (
-            origin
-            and origin != expected_origin
-        ):
+        if origin and origin != expected_origin:
             self.send_error(403)
             return
 
-        if (
-            self.headers.get(
-                "X-Review-Token"
-            ) != TOKEN
+        supplied_token = self.headers.get(
+            "X-Review-Token", ""
+        )
+
+        if not secrets.compare_digest(
+            supplied_token,
+            TOKEN,
         ):
             self.send_error(403)
             return
@@ -1735,38 +1954,26 @@ class Handler(BaseHTTPRequestHandler):
         try:
             length = int(
                 self.headers.get(
-                    "Content-Length",
-                    "0",
+                    "Content-Length", "0"
                 )
             )
 
-            if (
-                length <= 0
-                or length > 16384
-            ):
+            if length <= 0 or length > 16384:
                 raise ValueError(
                     "不正なリクエストサイズ"
                 )
 
             data = json.loads(
-                self.rfile.read(
-                    length
-                )
+                self.rfile.read(length)
             )
 
-            if not isinstance(
-                data,
-                dict,
-            ):
+            if not isinstance(data, dict):
                 raise ValueError(
                     "リクエスト形式が不正です"
                 )
 
             field_id = str(
-                data.get(
-                    "field_id",
-                    "",
-                )
+                data.get("field_id", "")
             ).strip()
 
             with LOCK:
@@ -1774,12 +1981,8 @@ class Handler(BaseHTTPRequestHandler):
 
                 match = next(
                     (
-                        row
-                        for row in rows
-                        if (
-                            row["field_id"]
-                            == field_id
-                        )
+                        row for row in rows
+                        if row["field_id"] == field_id
                     ),
                     None,
                 )
@@ -1794,28 +1997,30 @@ class Handler(BaseHTTPRequestHandler):
                         match,
                         data,
                     )
+
+                elif path == "/api/address":
+                    candidates = load_candidates()
+
+                    self.update_address(
+                        match,
+                        data,
+                        candidates,
+                    )
+
                 else:
                     self.update_location(
                         match,
                         data,
                     )
 
-                backup_file()
+                save_data(columns, rows)
 
-                save_data(
-                    columns,
-                    rows,
-                )
-
-            self.send_content(
+            self.send_json(
                 200,
-                json.dumps(
-                    {
-                        "ok": True,
-                        "field_id": field_id,
-                    }
-                ).encode("utf-8"),
-                "application/json; charset=utf-8",
+                {
+                    "ok": True,
+                    "field_id": field_id,
+                },
             )
 
         except (
@@ -1823,76 +2028,103 @@ class Handler(BaseHTTPRequestHandler):
             TypeError,
             json.JSONDecodeError,
         ) as error:
-            self.send_content(
+            self.send_json(
                 400,
-                json.dumps(
-                    {
-                        "error": str(error),
-                    },
-                    ensure_ascii=False,
-                ).encode("utf-8"),
-                "application/json; charset=utf-8",
+                {"error": str(error)},
             )
 
         except OSError as error:
-            self.send_content(
+            self.send_json(
                 500,
-                json.dumps(
-                    {
-                        "error": str(error),
-                    },
-                    ensure_ascii=False,
-                ).encode("utf-8"),
-                "application/json; charset=utf-8",
+                {"error": str(error)},
             )
 
     @staticmethod
-    def update_official(
-        row,
-        data,
-    ):
+    def update_official(row, data):
         url = str(
-            data.get(
-                "url",
-                "",
-            )
+            data.get("url", "")
         ).strip()
 
-        if not valid_official_url(
-            url
-        ):
+        if not valid_official_url(url):
             raise ValueError(
                 "有効なHTTPまたはHTTPSの公式URLを入力してください"
             )
 
-        row[
-            "confirmed_official_url"
-        ] = url
+        old_url = row.get(
+            "confirmed_official_url", ""
+        ).strip()
+
+        row["confirmed_official_url"] = url
+
+        if old_url != url:
+            row["address_review_status"] = "pending"
+            row["address_review_source"] = ""
+            row["address_review_note"] = ""
 
     @staticmethod
-    def update_location(
-        row,
-        data,
-    ):
-        latitude = str(
-            data.get(
-                "latitude",
-                "",
+    def update_address(row, data, candidates):
+        field_id = row["field_id"]
+        candidate = candidates.get(field_id)
+
+        if not valid_address_candidate(
+            row,
+            candidate,
+        ):
+            raise ValueError(
+                "現在の公式URLに対応する住所候補がありません"
             )
+
+        address = data.get("address")
+        action = data.get("action")
+        note = data.get("note", "")
+
+        if not isinstance(address, str):
+            raise ValueError("住所形式が不正です")
+
+        if not isinstance(note, str):
+            raise ValueError("メモ形式が不正です")
+
+        note = note.strip()
+
+        if len(note) > 1000:
+            raise ValueError(
+                "確認メモは1000文字以内にしてください"
+            )
+
+        if address not in candidate["candidateAddresses"]:
+            raise ValueError(
+                "選択した住所が候補にありません"
+            )
+
+        if action not in ("approve", "reject"):
+            raise ValueError(
+                "承認または却下を選択してください"
+            )
+
+        if action == "approve":
+            row["address"] = address
+            row["address_review_status"] = "approved"
+        else:
+            row["address_review_status"] = "rejected"
+
+        row["address_review_source"] = (
+            candidate["sourceUrl"]
+        )
+
+        row["address_review_note"] = note
+
+    @staticmethod
+    def update_location(row, data):
+        latitude = str(
+            data.get("latitude", "")
         ).strip()
 
         longitude = str(
-            data.get(
-                "longitude",
-                "",
-            )
+            data.get("longitude", "")
         ).strip()
 
         notes = str(
-            data.get(
-                "notes",
-                "",
-            )
+            data.get("notes", "")
         ).strip()
 
         if not valid_coordinate(
@@ -1909,23 +2141,15 @@ class Handler(BaseHTTPRequestHandler):
             )
 
         if (
-            row.get(
-                "review_status",
-                "",
-            ).strip()
+            row.get("review_status", "").strip()
             == "verified"
             and valid_coordinate(
                 row.get("latitude"),
                 row.get("longitude"),
             )
         ):
-            old_lat = float(
-                row["latitude"]
-            )
-
-            old_lon = float(
-                row["longitude"]
-            )
+            old_lat = float(row["latitude"])
+            old_lon = float(row["longitude"])
 
             if not (
                 math.isclose(
@@ -1942,39 +2166,32 @@ class Handler(BaseHTTPRequestHandler):
                 )
             ):
                 raise ValueError(
-                    "確認済み座標の変更は"
-                    "自動保存できません"
+                    "確認済み座標の変更は自動保存できません"
                 )
 
         row["latitude"] = latitude
         row["longitude"] = longitude
-
-        row["review_status"] = (
-            "verified"
-        )
-
+        row["review_status"] = "verified"
         row["notes"] = notes
 
 
 def main():
     load_data()
+    load_candidates()
 
     server = ThreadingHTTPServer(
         (HOST, PORT),
         Handler,
     )
 
-    url = (
-        f"http://{HOST}:{PORT}"
-    )
+    url = f"http://{HOST}:{PORT}"
 
     print()
-    print(
-        "FIELD//BASE Research Manager"
-    )
-    print("=" * 40)
+    print("FIELD//BASE Unified Research Manager")
+    print("=" * 45)
     print(f"URL: {url}")
     print(f"CSV: {CSV_PATH}")
+    print(f"Address candidates: {CANDIDATES_PATH}")
     print("終了: Ctrl+C")
     print()
 
@@ -1984,9 +2201,7 @@ def main():
         server.serve_forever()
 
     except KeyboardInterrupt:
-        print(
-            "\nサーバーを終了します"
-        )
+        print("\nサーバーを終了します")
 
     finally:
         server.server_close()
