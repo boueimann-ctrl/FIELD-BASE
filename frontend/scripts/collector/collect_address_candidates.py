@@ -2,15 +2,14 @@
 #!/usr/bin/env python3
 """FIELD//BASE official HTML address candidate collector.
 
-Extract possible facility addresses from official HTML pages.
+Collect address candidates from human-confirmed official websites.
 
 Safety:
-- Reuse the existing robots.txt-aware HTML fetcher.
-- Use only human-confirmed official website URLs.
-- Match candidate addresses against registered prefecture/city.
-- Never modify published field data or research CSV.
+- Reuse the robots.txt-aware HTML fetcher.
+- Do not modify published data or research CSV.
 - Require --apply to save candidate JSON.
-- Preserve previous candidates if collection fails.
+- Preserve existing candidates when collection fails.
+- Never automatically approve extracted addresses.
 """
 
 from __future__ import annotations
@@ -23,6 +22,7 @@ import re
 import sys
 import tempfile
 import time
+import unicodedata
 
 from datetime import datetime, timezone
 from html.parser import HTMLParser
@@ -67,16 +67,70 @@ PREFECTURE_PATTERN = "|".join(
 
 ADDRESS_PATTERN = re.compile(
     rf"(?:{PREFECTURE_PATTERN})"
-    r"[^\s<>「」『』【】]{3,90}"
+    r"[^\s<>「」『』【】]{3,100}"
 )
 
 POSTAL_PATTERN = re.compile(
     r"〒?\s*\d{3}[-－]\d{4}"
 )
 
+# A numeric address component is required.
+# Examples:
+#   十余一60-15
+#   十余一60番地15
+#   西新宿2丁目8-1
+NUMBER_PATTERN = re.compile(
+    r"\d+(?:丁目|番地|番|号|[-－−ー]\d+)"
+)
+
+AREA_PATTERN = re.compile(
+    r"\d+(?:\.\d+)?"
+    r"(?:㎡|m²|m2|平方メートル|坪|ヘクタール|ha)"
+    r"(?:の|を|で|ある|以上|以下|超)?",
+    re.IGNORECASE,
+)
+
+DESCRIPTION_WORDS = (
+    "サバイバルゲーム",
+    "サバゲー",
+    "フィールド",
+    "施設紹介",
+    "営業時間",
+    "アクセス方法",
+    "定例会",
+    "予約受付",
+    "レンタル",
+    "イベント",
+)
+
+ADDRESS_STOP_WORDS = (
+    "電話",
+    "TEL",
+    "FAX",
+    "営業時間",
+    "定休日",
+    "アクセス",
+    "お問い合わせ",
+    "サバイバルゲーム",
+    "サバゲー",
+    "フィールド",
+    "施設紹介",
+    "定例会",
+    "予約受付",
+    "レンタル",
+    "イベント",
+)
+
+# These characters can appear inside Japanese street addresses.
+ADDRESS_SUFFIX_PATTERN = re.compile(
+    r"^[一-龥々〆ヶぁ-んァ-ヶA-Za-z0-9"
+    r"－−ー\-丁目番地号条東西南北"
+    r"ノの大字字]+$"
+)
+
 
 class VisibleTextParser(HTMLParser):
-    """Extract visible-ish HTML text without executing JavaScript."""
+    """Extract text without running scripts."""
 
     SKIP_TAGS = {
         "script",
@@ -86,47 +140,57 @@ class VisibleTextParser(HTMLParser):
         "template",
     }
 
+    BLOCK_TAGS = {
+        "br",
+        "p",
+        "div",
+        "li",
+        "tr",
+        "section",
+        "footer",
+        "header",
+        "address",
+    }
+
     def __init__(self):
         super().__init__(
             convert_charrefs=True
         )
 
-        self.skip_depth = 0
+        self.skip_stack = []
         self.parts = []
 
     def handle_starttag(self, tag, attrs):
-        if self.skip_depth:
-            self.skip_depth += 1
+        if self.skip_stack:
+            self.skip_stack.append(tag)
             return
 
         if tag in self.SKIP_TAGS:
-            self.skip_depth = 1
+            self.skip_stack.append(tag)
             return
 
-        if tag in {
-            "br", "p", "div", "li",
-            "tr", "section", "footer",
-            "header", "address",
-        }:
+        if tag in self.BLOCK_TAGS:
             self.parts.append("\n")
 
     def handle_startendtag(self, tag, attrs):
-        if not self.skip_depth and tag == "br":
+        if not self.skip_stack and tag == "br":
             self.parts.append("\n")
 
     def handle_endtag(self, tag):
-        if self.skip_depth:
-            self.skip_depth -= 1
+        if self.skip_stack:
+            # HTML may contain nested elements in skipped sections.
+            if tag in self.skip_stack:
+                while self.skip_stack:
+                    current = self.skip_stack.pop()
+                    if current == tag:
+                        break
             return
 
-        if tag in {
-            "p", "div", "li", "tr",
-            "section", "address",
-        }:
+        if tag in self.BLOCK_TAGS:
             self.parts.append("\n")
 
     def handle_data(self, data):
-        if not self.skip_depth:
+        if not self.skip_stack:
             self.parts.append(data)
 
     def get_text(self):
@@ -134,15 +198,23 @@ class VisibleTextParser(HTMLParser):
 
 
 def normalize(value):
+    value = unicodedata.normalize(
+        "NFKC",
+        str(value),
+    )
+
     return re.sub(
         r"[\s\u3000・／/（）()\[\]【】\-_.]+",
         "",
-        str(value).casefold(),
+        value.casefold(),
     )
 
 
 def clean_address(value):
-    value = value.strip()
+    value = unicodedata.normalize(
+        "NFKC",
+        str(value),
+    ).strip()
 
     value = POSTAL_PATTERN.sub(
         "",
@@ -155,16 +227,80 @@ def clean_address(value):
         maxsplit=1,
     )[0]
 
-    value = re.split(
-        r"(?:TEL|FAX|電話|営業時間|定休日|アクセス)",
-        value,
-        maxsplit=1,
-        flags=re.IGNORECASE,
-    )[0]
+    for word in ADDRESS_STOP_WORDS:
+        match = re.search(
+            re.escape(word),
+            value,
+            flags=re.IGNORECASE,
+        )
+
+        if match:
+            value = value[:match.start()]
 
     return value.strip(
         " \t\r\n:：-－"
     )
+
+
+def evaluate_address(address, prefecture, city):
+    """Return (accepted, reason) for an address candidate."""
+
+    if not address.startswith(prefecture):
+        return False, "都道府県不一致"
+
+    prefix = prefecture + city
+
+    if not normalize(address).startswith(
+        normalize(prefix)
+    ):
+        return False, "市区町村不一致"
+
+    suffix = address[len(prefix):]
+
+    if not suffix:
+        return False, "町名・番地なし"
+
+    if AREA_PATTERN.search(suffix):
+        return False, "面積表記を含む"
+
+    if any(
+        word in suffix
+        for word in DESCRIPTION_WORDS
+    ):
+        return False, "施設紹介文を含む"
+
+    if len(address) > 100:
+        return False, "文字数が長すぎる"
+
+    if not NUMBER_PATTERN.search(suffix):
+        return False, "番地形式なし"
+
+    if not ADDRESS_SUFFIX_PATTERN.fullmatch(suffix):
+        return False, "住所形式以外の文字を含む"
+
+    # Avoid accepting a bare number such as "白井市16000".
+    # A number must be preceded by a plausible town name,
+    # or the address must use an explicit block/lot marker.
+    first_number = re.search(
+        r"\d+",
+        suffix,
+    )
+
+    if first_number is None:
+        return False, "番地なし"
+
+    before_number = suffix[:first_number.start()]
+
+    if (
+        not before_number
+        and not re.search(
+            r"(?:丁目|番地|番|号)",
+            suffix,
+        )
+    ):
+        return False, "町名なし"
+
+    return True, "住所形式に一致"
 
 
 def load_research():
@@ -193,23 +329,48 @@ def load_research():
                 + ", ".join(sorted(missing))
             )
 
-        return list(reader)
+        rows = list(reader)
+
+    ids = [
+        row["field_id"].strip()
+        for row in rows
+    ]
+
+    if not all(ids):
+        raise ValueError(
+            "施設IDが空の行があります"
+        )
+
+    if len(ids) != len(set(ids)):
+        raise ValueError(
+            "施設IDが重複しています"
+        )
+
+    return rows
 
 
-def extract_candidates(html, prefecture, city):
+def extract_candidates(
+    html,
+    prefecture,
+    city,
+    diagnostics=None,
+):
     parser = VisibleTextParser()
     parser.feed(html)
 
     text = parser.get_text()
 
-    # HTMLのタグ境界で分断された住所にも対応するため、
-    # 行単位のテキストを利用する。
     lines = [
-        re.sub(r"[ \t\u3000]+", "", line)
+        re.sub(
+            r"[ \t\u3000]+",
+            "",
+            line,
+        )
         for line in text.splitlines()
     ]
 
-    found = set()
+    accepted = set()
+    rejected = {}
 
     for line in lines:
         for match in ADDRESS_PATTERN.finditer(line):
@@ -217,19 +378,31 @@ def extract_candidates(html, prefecture, city):
                 match.group()
             )
 
-            if not address.startswith(prefecture):
-                continue
+            valid, reason = evaluate_address(
+                address,
+                prefecture,
+                city,
+            )
 
-            if normalize(city) not in normalize(address):
-                continue
+            if valid:
+                accepted.add(address)
+            elif address:
+                rejected[address] = reason
 
-            if len(address) > 100:
-                continue
-
-            found.add(address)
+    if diagnostics is not None:
+        diagnostics["rejected"] = [
+            {
+                "address": address,
+                "reason": reason,
+            }
+            for address, reason in sorted(
+                rejected.items()
+            )
+            if address not in accepted
+        ]
 
     return sorted(
-        found,
+        accepted,
         key=lambda value: (
             len(value),
             value,
@@ -292,11 +465,10 @@ def write_atomic(data):
         )
 
     finally:
-        if (
-            temporary is not None
-            and temporary.exists()
-        ):
-            temporary.unlink()
+        if temporary is not None:
+            temporary.unlink(
+                missing_ok=True
+            )
 
 
 def main():
@@ -368,9 +540,11 @@ def main():
         if html is None:
             print(
                 "  HTML取得失敗: "
-                + diagnostics.get(
-                    "reason",
-                    "不明",
+                + str(
+                    diagnostics.get(
+                        "reason",
+                        "不明",
+                    )
                 )
             )
             continue
@@ -389,22 +563,22 @@ def main():
             )
             continue
 
+        extraction = {}
+
         candidates = extract_candidates(
             html,
             prefecture,
             city,
+            extraction,
         )
 
-        if not candidates:
-            print(
-                "  住所候補なし"
-            )
-            continue
-
-        found += 1
+        rejected = extraction.get(
+            "rejected",
+            [],
+        )
 
         print(
-            f"  住所候補: {len(candidates)}件"
+            f"  採用候補: {len(candidates)}件"
         )
 
         for address in candidates:
@@ -412,18 +586,93 @@ def main():
                 f"    - {address}"
             )
 
+        print(
+            f"  除外候補: {len(rejected)}件"
+        )
+
+        for item in rejected[:20]:
+            print(
+                f"    - {item['address']}"
+            )
+
+            print(
+                f"      理由: {item['reason']}"
+            )
+
+        if len(rejected) > 20:
+            print(
+                "    ...その他の除外候補は省略"
+            )
+
+        registered = row[
+            "address"
+        ].strip()
+
+        matched = any(
+            normalize(address)
+            == normalize(registered)
+            for address in candidates
+        )
+
+        print(
+            "  既存住所との一致: "
+            + (
+                "YES"
+                if matched
+                else "NO"
+            )
+        )
+
+        if not candidates:
+            print(
+                "  保存対象の住所候補なし"
+            )
+            continue
+
+        found += 1
+
+        # Preserve the previous review status only when
+        # the candidate list and source URL are unchanged.
+        previous = output.get(
+            field_id,
+            {},
+        )
+
+        same_candidates = (
+            previous.get(
+                "candidateAddresses"
+            ) == candidates
+            and previous.get(
+                "sourceUrl"
+            ) == url
+        )
+
+        review_status = (
+            previous.get(
+                "reviewStatus",
+                "pending",
+            )
+            if same_candidates
+            else "pending"
+        )
+
         output[field_id] = {
             "fieldName": row[
                 "field_name"
             ],
-            "registeredAddress": row[
-                "address"
-            ],
+            "registeredAddress": registered,
             "candidateAddresses": candidates,
             "sourceUrl": url,
             "sourceType": "official_html",
-            "reviewStatus": "pending",
-            "collectedAt": today,
+            "reviewStatus": review_status,
+            "collectedAt": (
+                previous.get(
+                    "collectedAt",
+                    today,
+                )
+                if same_candidates
+                else today
+            ),
         }
 
     print()
@@ -445,13 +694,15 @@ def main():
 
     if not args.apply:
         print(
-            "プレビューのみ。ファイルは変更していません"
+            "プレビューのみ。"
+            "JSONは変更していません"
         )
         return 0
 
     if output == load_existing():
         print(
-            "変更なし。JSONの書き換えを省略"
+            "変更なし。"
+            "JSONの書き換えを省略"
         )
         return 0
 
