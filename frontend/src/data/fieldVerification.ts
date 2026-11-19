@@ -1,5 +1,6 @@
 
 import type { Field } from '../types/field'
+import autoData from './generated/fieldAutoData.json'
 
 type VerifiedFieldData = Partial<
   Pick<
@@ -10,6 +11,17 @@ type VerifiedFieldData = Partial<
     | 'address'
     | 'rental'
     | 'beginnerFriendly'
+  >
+>
+
+type AutoFieldData = Partial<
+  Pick<
+    Field,
+    | 'address'
+    | 'latitude'
+    | 'longitude'
+    | 'sourceUrl'
+    | 'verifiedAt'
   >
 >
 
@@ -99,19 +111,23 @@ const verifiedFields: Record<string, VerifiedFieldData> = {
   },
 }
 
+const automaticFields: Record<string, AutoFieldData> = autoData
+
 export function attachFieldVerification(
   sourceFields: Field[]
 ): Field[] {
   return sourceFields.map((field) => {
-    const verified = verifiedFields[field.id]
+    const automatic = automaticFields[field.id]
+    const manual = verifiedFields[field.id]
 
-    if (!verified) {
+    if (!automatic && !manual) {
       return field
     }
 
     return {
       ...field,
-      ...verified,
+      ...(automatic ?? {}),
+      ...(manual ?? {}),
     }
   })
 }

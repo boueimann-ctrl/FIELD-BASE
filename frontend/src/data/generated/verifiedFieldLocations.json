@@ -1,4 +1,3 @@
-
 {
   "bravepoint-daiba": {
     "latitude": 35.62898848020648,
@@ -8,9 +7,17 @@
     "latitude": 35.7662,
     "longitude": 140.1836
   },
+  "desert-union": {
+    "latitude": 35.770245,
+    "longitude": 140.252522
+  },
   "ops": {
     "latitude": 35.61704368020931,
     "longitude": 139.49288281525693
+  },
+  "rockhill": {
+    "latitude": 35.81529100198397,
+    "longitude": 140.08567915767097
   },
   "sabage-paradise": {
     "latitude": 35.658658072594534,
